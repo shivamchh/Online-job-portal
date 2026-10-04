@@ -9,11 +9,8 @@ public class DBConnection {
 
     private static final String URL =
             "jdbc:mysql://localhost:3306/online_job_portal";
-
-    private static final String USERNAME = "root";
-
-    private static final String PASSWORD = "Agrma$2021%";
-
+    private static final String USERNAME = System.getenv("DB_USERNAME");
+    private static final String PASSWORD = System.getenv("DB_PASSWORD");
     public static Connection getConnection() throws SQLException {
 
         return DriverManager.getConnection(
