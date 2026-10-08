@@ -1,0 +1,11 @@
+.job-list {
+    display: grid;
+    gap: 16px;
+}
+
+.job-item {
+    border: 1px solid #d1d5db;
+    padding: 16px;
+    background: #ffffff;
+}
+

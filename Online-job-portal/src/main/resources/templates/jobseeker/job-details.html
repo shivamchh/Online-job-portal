@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Job Details')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('jobs')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="mb-3">
+                <a href="/jobseeker/jobs" class="text-decoration-none text-muted small">
+                    &larr; Back to all jobs
+                </a>
+            </div>
+
+            <div th:if="${job != null}" class="card border-0 shadow-sm rounded-3 bg-white p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <span class="badge bg-light text-dark border me-2" th:text="${job.jobType}">Full Time</span>
+                        <span class="badge badge-status badge-open">OPEN</span>
+                        <h2 class="fw-bold mt-2 mb-1" th:text="${job.title}">Senior Java Developer</h2>
+                        <div class="text-muted small">
+                            <i class="bi bi-geo-alt me-1"></i><span th:text="${job.location}">Bangalore</span> &bull; 
+                            <span class="text-success fw-bold" th:text="'$' + ${#numbers.formatDecimal(job.salary, 0, 'COMMA', 2, 'POINT')}">$85,000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="mb-4">
+                    <h5 class="fw-bold mb-2">Job Description</h5>
+                    <p class="text-secondary leading-relaxed" style="white-space: pre-line;" th:text="${job.description}">Detailed job description</p>
+                </div>
+
+                <div class="mb-4">
+                    <h5 class="fw-bold mb-2">Requirements & Technical Skills</h5>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        <span th:each="skill : ${#strings.arraySplit(job.requirements, ',')}" 
+                              class="badge bg-light text-primary border font-monospace px-3 py-2" 
+                              th:text="${#strings.trim(skill)}">Java</span>
+                    </div>
+                </div>
+
+                <!-- Apply section -->
+                <div class="card bg-light border-0 p-4 rounded-3 mt-4">
+                    <div th:if="${alreadyApplied}" class="alert alert-success d-flex align-items-center mb-0" role="alert">
+                        <i class="bi bi-check-circle-fill fs-4 me-2"></i>
+                        <div>
+                            <strong>Application Submitted!</strong>
+                            <div class="small">You have already submitted an application for this position. Check your applications page to view the live status history timeline.</div>
+                        </div>
+                    </div>
+
+                    <div th:if="${!alreadyApplied}">
+                        <h5 class="fw-bold mb-2">Apply for this Job Opening</h5>
+                        <p class="text-muted small mb-3">Submit your resume in PDF or DOCX format (max 2 MB).</p>
+
+                        <form method="post" action="/servlet/resume-upload" enctype="multipart/form-data" class="row g-3 align-items-center">
+                            <input type="hidden" name="jobId" th:value="${job.id}">
+                            <div class="col-md-8">
+                                <input type="file" name="resumeFile" accept=".pdf,.docx" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                                    <i class="bi bi-send-fill me-1"></i> Submit Resume
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+
+            <div th:if="${job == null}" class="alert alert-danger">
+                Job opening could not be found.
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

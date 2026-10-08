@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Manage Users')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('users')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">User Directory</h2>
+                    <p class="text-muted small mb-0">Search, filter, and moderate registered accounts with soft-delete controls.</p>
+                </div>
+            </div>
+
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle datatable">
+                        <thead class="table-light small text-uppercase">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions (Soft Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="user : ${users}">
+                                <td class="font-monospace text-muted" th:text="${user.id}">1</td>
+                                <td>
+                                    <strong><span th:text="${user.name}">John Doe</span></strong>
+                                    <div th:if="${user.skills != null and !user.skills.isEmpty()}" class="small text-muted">
+                                        <i class="bi bi-tag me-1"></i><span th:text="${user.skills}">Java, Spring</span>
+                                    </div>
+                                </td>
+                                <td th:text="${user.email}">user@portal.com</td>
+                                <td th:text="${user.phone}">9876543210</td>
+                                <td>
+                                    <span th:if="${user instanceof T(com.example.Online_job_portal.model.Admin)}" class="badge bg-danger">ADMIN</span>
+                                    <span th:if="${user instanceof T(com.example.Online_job_portal.model.Employer)}" class="badge bg-primary">EMPLOYER</span>
+                                    <span th:if="${user instanceof T(com.example.Online_job_portal.model.JobSeeker)}" class="badge bg-success">JOB SEEKER</span>
+                                </td>
+                                <td>
+                                    <span th:if="${user.isActive()}" class="badge badge-status badge-active">ACTIVE</span>
+                                    <span th:if="${!user.isActive()}" class="badge badge-status badge-inactive">INACTIVE</span>
+                                </td>
+                                <td class="text-end">
+                                    <form method="post" action="/servlet/users" class="d-inline">
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="id" th:value="${user.id}">
+                                        <button th:if="${user.isActive()}" type="submit" class="btn btn-sm btn-outline-danger" title="Deactivate user without breaking existing applications">
+                                            <i class="bi bi-person-x me-1"></i> Deactivate
+                                        </button>
+                                        <button th:if="${!user.isActive()}" type="submit" class="btn btn-sm btn-outline-success" title="Reactivate user">
+                                            <i class="bi bi-person-check me-1"></i> Activate
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

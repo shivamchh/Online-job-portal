@@ -8,9 +8,13 @@ import java.sql.SQLException;
 public class DBConnection {
 
     private static final String URL =
-            "jdbc:mysql://localhost:3306/online_job_portal";
-    private static final String USERNAME = System.getenv("DB_USERNAME");
-    private static final String PASSWORD = System.getenv("DB_PASSWORD");
+            getEnvOrDefault("DB_URL", "jdbc:mysql://localhost:3306/online_job_portal");
+    private static final String USERNAME = getEnvOrDefault("DB_USERNAME", "root");
+    private static final String PASSWORD = getEnvOrDefault("DB_PASSWORD", "");
+
+    private DBConnection() {
+    }
+
     public static Connection getConnection() throws SQLException {
 
         return DriverManager.getConnection(
@@ -18,5 +22,10 @@ public class DBConnection {
                 USERNAME,
                 PASSWORD
         );
+    }
+
+    private static String getEnvOrDefault(String name, String defaultValue) {
+        String value = System.getenv(name);
+        return value == null || value.isBlank() ? defaultValue : value;
     }
 }

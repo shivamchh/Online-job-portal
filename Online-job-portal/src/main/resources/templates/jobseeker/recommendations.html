@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Skill-Based Recommendations')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('recommendations')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Skill-Matched Recommendations</h2>
+                    <p class="text-muted small mb-0">Transparent keyword-matching algorithm ranked by match score using Java Comparator sorting.</p>
+                </div>
+                <a href="/jobseeker/profile" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-pencil-square me-1"></i> Edit Profile Skills
+                </a>
+            </div>
+
+            <!-- Algorithm Explanation Banner -->
+            <div class="card border-0 bg-primary-subtle rounded-3 p-3 mb-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-primary text-white flex-shrink-0">
+                        <i class="bi bi-lightbulb-fill"></i>
+                    </div>
+                    <div class="small">
+                        <strong>Explainable Recommendation Logic:</strong>
+                        Your skills are tokenized and scored against job requirements. The list is sorted in descending order of keyword matches via <code>Comparator.comparingInt(JobRecommendation::getMatchScore).reversed()</code>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Filter Form -->
+            <div class="card border-0 shadow-sm rounded-3 bg-white p-3 mb-4">
+                <form method="get" action="/jobseeker/recommendations" class="row g-2 align-items-center">
+                    <div class="col-md-9">
+                        <label class="form-label small fw-semibold text-muted mb-1">Evaluate Against Skills</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="bi bi-tags"></i></span>
+                            <input type="text" name="skills" th:value="${skills}" placeholder="e.g. Java, Spring Boot, MySQL, React" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-md-3 pt-md-4">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            <i class="bi bi-arrow-repeat me-1"></i> Re-Calculate Matches
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Recommendations Grid -->
+            <div class="row g-4">
+                <div th:each="rec : ${recommendations}" class="col-md-6">
+                    <div class="card job-card h-100 p-4 d-flex flex-column justify-content-between shadow-sm">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-light text-dark border small" th:text="${rec.job.jobType}">Full Time</span>
+                                <span class="badge bg-primary fs-6 px-3 py-1" th:text="'Score: ' + ${rec.matchScore}">Score: 3</span>
+                            </div>
+
+                            <h4 class="fw-bold mb-1">
+                                <a th:href="@{/jobseeker/job-details(id=${rec.job.id})}" class="text-decoration-none text-dark" th:text="${rec.job.title}">Job Title</a>
+                            </h4>
+
+                            <div class="small text-muted mb-3">
+                                <i class="bi bi-geo-alt me-1"></i><span th:text="${rec.job.location}">Bangalore</span> &bull; 
+                                <span class="text-success fw-bold" th:text="'$' + ${#numbers.formatDecimal(rec.job.salary, 0, 'COMMA', 2, 'POINT')}">$85,000</span>
+                            </div>
+
+                            <div class="card bg-light border-0 p-3 rounded-3 mb-3">
+                                <div class="small fw-semibold text-dark mb-1">
+                                    <i class="bi bi-check2-circle text-success me-1"></i> Matched Skills:
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <span th:each="skill : ${rec.matchedSkills}" class="badge bg-success-subtle text-success border border-success-subtle font-monospace" th:text="${skill}">Java</span>
+                                    <span th:if="${rec.matchedSkills.empty}" class="text-muted small">No exact keyword overlap</span>
+                                </div>
+                                <div class="small text-secondary" th:text="${rec.explanation}">Explanation string</div>
+                            </div>
+
+                            <p class="small text-secondary mb-0 text-truncate-2" th:text="${rec.job.description}">Role description</p>
+                        </div>
+
+                        <div class="pt-3 border-top mt-3 d-flex gap-2">
+                            <a th:href="@{/jobseeker/job-details(id=${rec.job.id})}" class="btn btn-primary btn-sm w-100 fw-semibold">
+                                View & Apply
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${recommendations.empty}" class="col-12 text-center py-5">
+                    <p class="text-muted">No recommendations available. Please provide skills above to evaluate matching jobs.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

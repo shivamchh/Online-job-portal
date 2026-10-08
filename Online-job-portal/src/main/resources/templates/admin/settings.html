@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('System Settings & Configuration')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('settings')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">System Settings & Configuration</h2>
+                    <p class="text-muted small mb-0">Manage global portal operational parameters, security rules, and runtime diagnostics.</p>
+                </div>
+            </div>
+
+            <!-- Flash alerts for save confirmation -->
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <div class="row g-4 mb-4">
+                <!-- Editable Settings Form -->
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-sliders text-primary"></i> Application Configuration Form
+                            </h5>
+                            <span class="badge bg-primary-subtle text-primary font-monospace">JDBC Key-Value Store</span>
+                        </div>
+
+                        <form method="post" action="/servlet/settings" class="needs-validation" novalidate id="settingsForm">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small">Portal Display Name</label>
+                                <input type="text" name="portal_name" class="form-control" 
+                                       th:value="${settings != null ? settings['portal_name'] : 'Online Job Portal'}" required>
+                                <div class="form-text small">Global application brand name displayed in headers and email alerts.</div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">Max Resume Size (MB)</label>
+                                    <div class="input-group">
+                                        <input type="number" name="max_resume_size_mb" class="form-control" min="1" max="50"
+                                               th:value="${settings != null ? settings['max_resume_size_mb'] : '2'}" required>
+                                        <span class="input-group-text">MB</span>
+                                    </div>
+                                    <div class="form-text small">Enforced by <code>@MultipartConfig</code> and ValidationUtil.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">Candidate Registration</label>
+                                    <select name="registration_open" class="form-select">
+                                        <option value="true" th:selected="${settings != null and settings['registration_open'] == 'true'}">Enabled (Open to Public)</option>
+                                        <option value="false" th:selected="${settings != null and settings['registration_open'] == 'false'}">Disabled (Invite Only)</option>
+                                    </select>
+                                    <div class="form-text small">Controls whether new seekers can register.</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">Portal Maintenance Mode</label>
+                                    <select name="maintenance_mode" class="form-select">
+                                        <option value="false" th:selected="${settings != null and settings['maintenance_mode'] == 'false'}">Active (Normal Operation)</option>
+                                        <option value="true" th:selected="${settings != null and settings['maintenance_mode'] == 'true'}">Maintenance Lock</option>
+                                    </select>
+                                    <div class="form-text small">Temporarily restricts portal access for maintenance.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">Support Contact Email</label>
+                                    <input type="email" name="contact_email" class="form-control"
+                                           th:value="${settings != null ? settings['contact_email'] : 'support@jobportal.com'}" required>
+                                    <div class="form-text small">Email address for escalation alerts and inquiries.</div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-3">
+                                <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold">
+                                    <i class="bi bi-check2-circle me-1"></i> Save Configuration
+                                </button>
+                                <span class="text-muted small">Changes take effect immediately across all active sessions.</span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Database Records Overview Table -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-database text-info"></i> Active DB Settings
+                            </h5>
+                            <span class="badge bg-light text-dark border">settings table</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Key</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="entry : ${settings}">
+                                        <td><code th:text="${entry.key}">portal_name</code></td>
+                                        <td><strong th:text="${entry.value}">Online Job Portal</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnostics & Threading Status -->
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4 h-100">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-cpu-fill text-primary"></i> Multithreading & Asynchronous Status
+                        </h5>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>ActivityLogger BlockingQueue Size</span>
+                                <span class="badge bg-primary font-monospace" th:text="${queueSize} + ' pending'">0 pending</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>ActivityLogger Consumer Thread</span>
+                                <span class="badge bg-success">RUNNING (Daemon)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>NotificationTask Thread Pool</span>
+                                <span class="badge bg-success">ACTIVE (Executors.newFixedThreadPool)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Session Inactivity Timeout</span>
+                                <span class="badge bg-info">30 Minutes</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4 h-100">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-check text-success"></i> Security & Reliability Controls
+                        </h5>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Password Encryption</span>
+                                <span class="badge bg-dark font-monospace">Salted SHA-256 (SecureRandom)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>SQL Injection Prevention</span>
+                                <span class="badge bg-success">PreparedStatement (All DAOs)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Access Control Mechanism</span>
+                                <span class="badge bg-primary">AuthFilter (@WebFilter RBAC)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Data Integrity Rule</span>
+                                <span class="badge bg-warning text-dark">Soft Delete Enforced</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

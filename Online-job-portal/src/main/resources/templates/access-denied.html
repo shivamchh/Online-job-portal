@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Access Denied')}"></head>
+<body class="bg-light">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+            <div class="card border-0 shadow-lg text-center p-4 rounded-4">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle p-4">
+                            <i class="bi bi-shield-lock-fill fs-1"></i>
+                        </span>
+                    </div>
+                    <h2 class="card-title fw-bold text-dark">403 - Access Denied</h2>
+                    <p class="text-muted mt-2">
+                        You do not have the required permissions or role privileges to view this page.
+                    </p>
+
+                    <div th:if="${role != null}" class="alert alert-warning py-2 mb-4">
+                        <small>Currently logged in as: <strong th:text="${userName}">User</strong> (<span th:text="${role}">ROLE</span>)</small>
+                    </div>
+
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="/" class="btn btn-outline-secondary">
+                            <i class="bi bi-house me-1"></i> Return Home
+                        </a>
+                        <a th:if="${role == 'ADMIN'}" href="/admin/dashboard" class="btn btn-primary">
+                            <i class="bi bi-speedometer2 me-1"></i> Admin Dashboard
+                        </a>
+                        <a th:if="${role == 'EMPLOYER'}" href="/employer/dashboard" class="btn btn-primary">
+                            <i class="bi bi-speedometer2 me-1"></i> Employer Dashboard
+                        </a>
+                        <a th:if="${role == 'JOB_SEEKER'}" href="/jobseeker/dashboard" class="btn btn-primary">
+                            <i class="bi bi-speedometer2 me-1"></i> Job Seeker Dashboard
+                        </a>
+                        <a th:if="${role == null}" href="/login" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

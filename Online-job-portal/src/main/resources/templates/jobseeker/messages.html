@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Employer Communications')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('messages')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Messages from Employers</h2>
+                    <p class="text-muted small mb-0">Communicate directly with hiring managers, view interview requests, and reply to queries.</p>
+                </div>
+            </div>
+
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden" style="min-height: 540px;">
+                <div class="row g-0">
+                    <!-- Employers List (Left Column) -->
+                    <div class="col-md-4 border-end bg-light">
+                        <div class="p-3 border-bottom bg-white fw-bold d-flex align-items-center gap-2">
+                            <i class="bi bi-buildings text-primary"></i> Employers
+                        </div>
+                        <div class="list-group list-group-flush" style="max-height: 480px; overflow-y: auto;">
+                            <a th:each="emp : ${employers}" 
+                               th:href="@{/jobseeker/messages(withUser=${emp.id})}"
+                               class="list-group-item list-group-item-action p-3"
+                               th:classappend="${selectedUser != null and selectedUser.id == emp.id ? 'active' : ''}">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="stat-icon bg-primary-subtle text-primary rounded-circle" style="width: 38px; height: 38px; font-size: 1rem;">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+                                    <div class="overflow-hidden">
+                                        <div class="fw-semibold text-truncate" th:text="${emp.name}">TechCorp Solutions</div>
+                                        <small class="text-muted text-truncate d-block" th:text="${emp.email}">employer@techcorp.com</small>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Conversation Thread (Right Column) -->
+                    <div class="col-md-8 d-flex flex-column" style="min-height: 540px;">
+                        <!-- Thread Header -->
+                        <div class="p-3 border-bottom bg-white d-flex justify-content-between align-items-center" th:if="${selectedUser != null}">
+                            <div>
+                                <h6 class="fw-bold mb-0" th:text="${selectedUser.name}">TechCorp Solutions</h6>
+                                <small class="text-muted" th:text="${selectedUser.email}">employer@techcorp.com</small>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary">Verified Employer</span>
+                        </div>
+
+                        <!-- Chat Messages Stream -->
+                        <div class="p-4 flex-grow-1 overflow-auto bg-light d-flex flex-column gap-3" style="max-height: 380px;">
+                            <div th:each="msg : ${conversation}" 
+                                 class="d-flex flex-column" 
+                                 th:classappend="${msg.senderId == currentUserId ? 'align-items-end' : 'align-items-start'}">
+                                <div class="p-3 rounded-4 shadow-sm" style="max-width: 75%;"
+                                     th:classappend="${msg.senderId == currentUserId ? 'bg-primary text-white' : 'bg-white text-dark'}">
+                                    <div class="small fw-semibold mb-1" 
+                                         th:classappend="${msg.senderId == currentUserId ? 'text-white-50' : 'text-primary'}"
+                                         th:text="${msg.senderId == currentUserId ? 'You' : msg.senderName}">Sender</div>
+                                    <div th:text="${msg.content}">Message body text</div>
+                                </div>
+                                <small class="text-muted mt-1 font-monospace" style="font-size: 0.7rem;" 
+                                       th:text="${#temporals.format(msg.sentAt, 'MMM dd, HH:mm')}">Oct 08, 14:30</small>
+                            </div>
+
+                            <div th:if="${conversation.empty}" class="text-center py-5 text-muted small">
+                                <i class="bi bi-chat-quote fs-2 d-block mb-2 text-secondary"></i>
+                                No messages yet with this employer. Type a message below to connect.
+                            </div>
+                        </div>
+
+                        <!-- Message Input Form (Servlet Submission) -->
+                        <div class="p-3 border-top bg-white" th:if="${selectedUser != null}">
+                            <form method="post" action="/servlet/messages" class="d-flex gap-2">
+                                <input type="hidden" name="receiverId" th:value="${selectedUser.id}">
+                                <input type="hidden" name="returnUrl" th:value="'/jobseeker/messages?withUser=' + ${selectedUser.id}">
+                                <textarea name="content" rows="2" class="form-control" placeholder="Reply to employer..." required></textarea>
+                                <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
+                                    <i class="bi bi-send-fill"></i> Reply
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

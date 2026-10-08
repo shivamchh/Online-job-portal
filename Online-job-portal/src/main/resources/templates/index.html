@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Modern Job Portal')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<!-- Hero Section -->
+<header class="bg-dark text-white py-5 position-relative overflow-hidden">
+    <div class="container py-4">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <span class="badge bg-primary px-3 py-2 text-uppercase mb-3">Enterprise Java 17 & Servlets</span>
+                <h1 class="display-4 fw-bold lh-sm mb-3">Connecting Great Talent With Outstanding Careers</h1>
+                <p class="lead text-light opacity-75 mb-4">
+                    Explore curated tech job listings, upload resumes securely, track real-time application status timelines, and experience skill-based recommendations.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="/jobseeker/jobs" class="btn btn-primary btn-lg px-4">
+                        <i class="bi bi-search me-1"></i> Browse All Jobs
+                    </a>
+                    <a href="/login" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In / Demo
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block text-center">
+                <div class="card bg-white text-dark shadow-lg p-4 rounded-4 text-start">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i> Quick Demo Access
+                    </h5>
+                    <p class="text-muted small mb-3">One-click credentials to test all roles immediately:</p>
+                    <div class="list-group list-group-flush small">
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <span class="badge bg-danger">ADMIN</span>
+                                <div class="fw-semibold">admin@portal.com</div>
+                            </div>
+                            <span class="text-muted font-monospace">admin123</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <span class="badge bg-primary">EMPLOYER</span>
+                                <div class="fw-semibold">employer@techcorp.com</div>
+                            </div>
+                            <span class="text-muted font-monospace">employer123</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <span class="badge bg-success">JOB SEEKER</span>
+                                <div class="fw-semibold">seeker@example.com</div>
+                            </div>
+                            <span class="text-muted font-monospace">seeker123</span>
+                        </div>
+                    </div>
+                    <a href="/login" class="btn btn-dark w-100 mt-3 btn-sm">Proceed to Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Feature Highlights -->
+<section class="py-5 bg-light">
+    <div class="container py-3">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Engineered For Performance & Reliability</h2>
+            <p class="text-muted">Built with plain Java, Servlets, JDBC PreparedStatement, and multithreading.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-3 rounded-3">
+                    <div class="card-body">
+                        <div class="stat-icon bg-primary-subtle text-primary mb-3">
+                            <i class="bi bi-file-earmark-arrow-up"></i>
+                        </div>
+                        <h5 class="fw-bold">Resume Uploads</h5>
+                        <p class="text-muted small">
+                            Multipart resume processing with @MultipartConfig. Strict file validation allowing only PDF and DOCX formats capped at 2 MB.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-3 rounded-3">
+                    <div class="card-body">
+                        <div class="stat-icon bg-success-subtle text-success mb-3">
+                            <i class="bi bi-cpu"></i>
+                        </div>
+                        <h5 class="fw-bold">Multithreaded Queue</h5>
+                        <p class="text-muted small">
+                            Background worker thread processing an asynchronous BlockingQueue for activity logging, along with asynchronous notification tasks.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm p-3 rounded-3">
+                    <div class="card-body">
+                        <div class="stat-icon bg-info-subtle text-info mb-3">
+                            <i class="bi bi-pie-chart"></i>
+                        </div>
+                        <h5 class="fw-bold">Interactive Analytics</h5>
+                        <p class="text-muted small">
+                            Dynamic Chart.js visualizations for jobs per month and candidate application statuses fed from JSON servlets.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-white border-top py-4 text-center text-muted small">
+    <div class="container">
+        <p class="mb-0">Online Job Portal &copy; 2026. Demonstrating Core Java, Servlets, JDBC, and Multithreading.</p>
+    </div>
+</footer>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

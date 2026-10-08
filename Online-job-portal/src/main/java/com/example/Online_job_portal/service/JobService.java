@@ -1,77 +1,78 @@
 package com.example.Online_job_portal.service;
 
+import com.example.Online_job_portal.dao.JobDAO;
 import com.example.Online_job_portal.exception.JobNotFoundException;
 import com.example.Online_job_portal.model.Job;
+import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
+@Service
 public class JobService implements JobOperations {
 
-    private List<Job> jobs = new ArrayList<>();
+    private final JobDAO jobDAO;
+
+    public JobService() {
+        this.jobDAO = new JobDAO();
+    }
+
+    public JobService(JobDAO jobDAO) {
+        this.jobDAO = jobDAO;
+    }
 
     @Override
     public void postJob(Job job) {
-
-        jobs.add(job);
-
+        jobDAO.save(job);
         System.out.println("Job posted successfully.");
     }
 
     @Override
     public void updateJob(Job job) {
-
-        for (int i = 0; i < jobs.size(); i++) {
-
-            if (jobs.get(i).getId() == job.getId()) {
-
-                jobs.set(i, job);
-
-                System.out.println("Job updated successfully.");
-
-                return;
-            }
-        }
-
-        System.out.println("Job not found.");
+        jobDAO.setJobStatus(job.getId(), job.getStatus());
+        System.out.println("Job updated successfully.");
     }
 
     @Override
     public void deleteJob(int jobId) {
-
-        for (int i = 0; i < jobs.size(); i++) {
-
-            if (jobs.get(i).getId() == jobId) {
-
-                jobs.remove(i);
-
-                System.out.println("Job deleted successfully.");
-
-                return;
-            }
-        }
-
-        System.out.println("Job not found.");
+        // Soft delete: marks job status as INACTIVE
+        jobDAO.deleteById(jobId);
+        System.out.println("Job deactivated successfully (soft delete).");
     }
 
     @Override
     public List<Job> getAllJobs() {
-
-        return jobs;
+        return jobDAO.findAll();
     }
 
-    // Exception handling
+    public List<Job> getAllActiveJobs() {
+        return jobDAO.findAllActive();
+    }
+
+    public List<Job> getJobsByEmployer(int employerId) {
+        return jobDAO.findByEmployerId(employerId);
+    }
+
+    public List<Job> searchJobs(String keyword, String location, String jobType, Double minSalary, int page, int pageSize) {
+        int offset = (Math.max(1, page) - 1) * pageSize;
+        return jobDAO.searchJobs(keyword, location, jobType, minSalary, offset, pageSize);
+    }
+
+    public int countSearchJobs(String keyword, String location, String jobType, Double minSalary) {
+        return jobDAO.countSearchJobs(keyword, location, jobType, minSalary);
+    }
+
+    public void toggleJobStatus(int jobId) {
+        jobDAO.toggleJobStatus(jobId);
+    }
+
+    public void setJobStatus(int jobId, String status) {
+        jobDAO.setJobStatus(jobId, status);
+    }
+
     public Job findJobById(int jobId) throws JobNotFoundException {
-
-        for (Job job : jobs) {
-
-            if (job.getId() == jobId) {
-                return job;
-            }
-        }
-
-        throw new JobNotFoundException(
-                "Job with ID " + jobId + " not found."
-        );
+        return jobDAO.findById(jobId)
+                .orElseThrow(() -> new JobNotFoundException(
+                        "Job with ID " + jobId + " not found."
+                ));
     }
 }

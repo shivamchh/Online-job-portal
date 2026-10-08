@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Admin Dashboard')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+
+    <!-- Main Content -->
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Administrator Dashboard</h2>
+                    <p class="text-muted small mb-0">Platform overview, system metrics, and live background activity.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/admin/users" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-people me-1"></i> Manage Users
+                    </a>
+                    <a href="/admin/jobs" class="btn btn-primary btn-sm">
+                        <i class="bi bi-briefcase me-1"></i> Manage Jobs
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash alerts -->
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <!-- 4 Metric Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-primary-subtle text-primary me-3">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Total Users</span>
+                                <h3 class="fw-bold mb-0 text-dark" th:text="${totalUsers}">12</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="stat-icon bg-success-subtle text-success me-3">
+                            <i class="bi bi-briefcase-fill"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small fw-semibold text-uppercase">Active Jobs</span>
+                            <h3 class="fw-bold mb-0 text-dark" th:text="${activeJobs}">8</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="stat-icon bg-warning-subtle text-warning me-3">
+                            <i class="bi bi-file-earmark-text-fill"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small fw-semibold text-uppercase">Applications</span>
+                            <h3 class="fw-bold mb-0 text-dark" th:text="${totalApplications}">24</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="stat-icon bg-info-subtle text-info me-3">
+                            <i class="bi bi-activity"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small fw-semibold text-uppercase">Total Postings</span>
+                            <h3 class="fw-bold mb-0 text-dark" th:text="${totalJobs}">10</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row (Chart.js via Servlet JSON) -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Job Postings Per Month</h5>
+                            <span class="badge bg-secondary-subtle text-dark small">Live Servlet Feed</span>
+                        </div>
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="jobsBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Application Statuses</h5>
+                            <span class="badge bg-secondary-subtle text-dark small">Breakdown</span>
+                        </div>
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="statusPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multithreaded Activity Log -->
+            <div class="card border-0 shadow-sm rounded-3 bg-white">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history text-primary"></i> Real-Time Activity Log
+                    </h5>
+                    <span class="badge bg-info-subtle text-info">Worker Thread & BlockingQueue</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small text-uppercase">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="log : ${recentActivities}">
+                                    <td class="text-muted font-monospace" th:text="${log.id}">1</td>
+                                    <td>
+                                        <i class="bi bi-person me-1 text-secondary"></i>
+                                        <strong th:text="${log.userName}">User</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-dark-subtle text-dark font-monospace" th:text="${log.action}">ACTION</span>
+                                    </td>
+                                    <td class="text-secondary small" th:text="${log.details}">Details</td>
+                                    <td class="text-muted small" th:text="${#temporals.format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}">2026-10-08</td>
+                                </tr>
+                                <tr th:if="${recentActivities.empty}">
+                                    <td colspan="5" class="text-center py-4 text-muted">No recent activity logged yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+<!-- Chart.js initialization script fed from StatisticsServlet JSON -->
+<script>
+    fetch('/servlet/statistics')
+        .then(res => res.json())
+        .then(data => {
+            // 1. Jobs by Month Bar Chart
+            const monthLabels = Object.keys(data.jobsByMonth);
+            const monthValues = Object.values(data.jobsByMonth);
+
+            const ctxBar = document.getElementById('jobsBarChart').getContext('2d');
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Job Postings',
+                        data: monthValues,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    }
+                }
+            });
+
+            // 2. Application Status Pie Chart
+            const statusLabels = Object.keys(data.applicationStatuses);
+            const statusValues = Object.values(data.applicationStatuses);
+
+            const ctxPie = document.getElementById('statusPieChart').getContext('2d');
+            new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusValues,
+                        backgroundColor: [
+                            '#f59e0b', // SUBMITTED (warning)
+                            '#fbbf24', // PENDING
+                            '#0284c7', // SHORTLISTED (info)
+                            '#10b981', // APPROVED (success)
+                            '#ef4444'  // REJECTED (danger)
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        })
+        .catch(err => console.error("Could not fetch statistics JSON:", err));
+</script>
+
+</body>
+</html>

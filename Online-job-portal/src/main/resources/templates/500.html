@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Internal Server Error')}"></head>
+<body class="bg-light">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+            <div class="card border-0 shadow-lg text-center p-4 rounded-4">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle p-4">
+                            <i class="bi bi-exclamation-octagon-fill fs-1"></i>
+                        </span>
+                    </div>
+                    <h2 class="card-title fw-bold text-dark">500 - Server Error</h2>
+                    <p class="text-muted mt-2">
+                        An unexpected error occurred while processing your request. Please try again shortly.
+                    </p>
+                    <div class="d-flex justify-content-center gap-2 mt-4">
+                        <a href="/" class="btn btn-primary">
+                            <i class="bi bi-house me-1"></i> Home
+                        </a>
+                        <button onclick="window.history.back()" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Go Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

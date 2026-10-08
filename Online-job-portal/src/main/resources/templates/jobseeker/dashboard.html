@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Job Seeker Dashboard')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Job Seeker Dashboard</h2>
+                    <p class="text-muted small mb-0">Welcome, <strong th:text="${userName}">Seeker</strong>. Track your job submissions and discovered opportunities.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/jobseeker/jobs" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search me-1"></i> Search Open Jobs
+                    </a>
+                    <a href="/jobseeker/recommendations" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-stars me-1"></i> Skill Recommendations
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash alerts -->
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <!-- Metrics -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-xl-4">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-primary-subtle text-primary me-3">
+                                <i class="bi bi-send-check-fill"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">My Applications</span>
+                                <h3 class="fw-bold mb-0 text-dark" th:text="${applicationsCount}">3</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-4">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-success-subtle text-success me-3">
+                                <i class="bi bi-patch-check-fill"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Shortlisted / Approved</span>
+                                <h3 class="fw-bold mb-0 text-dark" th:text="${shortlistedCount}">1</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-4">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-warning-subtle text-warning me-3">
+                                <i class="bi bi-bell-fill"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Unread Notifications</span>
+                                <h3 class="fw-bold mb-0 text-dark" th:text="${unreadCount}">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Notifications Panel -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-bell text-warning"></i> Notifications
+                            </h5>
+                            <form th:if="${unreadCount > 0}" method="post" action="/servlet/notifications" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-link text-decoration-none p-0 text-muted small">
+                                    Mark all as read
+                                </button>
+                            </form>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                <div th:each="n : ${notifications}" class="list-group-item p-3" th:classappend="${!n.read ? 'bg-light' : ''}">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <strong class="small" th:text="${n.title}">Notification Title</strong>
+                                        <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.65rem;" th:if="${!n.read}">NEW</span>
+                                    </div>
+                                    <p class="small text-muted mb-1" th:text="${n.message}">Notification message</p>
+                                    <small class="text-secondary" th:text="${#temporals.format(n.createdAt, 'MMM dd, HH:mm')}">Oct 08</small>
+                                </div>
+                                <div th:if="${notifications.empty}" class="p-4 text-center text-muted small">
+                                    No notifications at this time.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Recommended Jobs -->
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-stars text-primary"></i> Top Recommended for You
+                            </h5>
+                            <a href="/jobseeker/recommendations" class="small text-primary text-decoration-none">View All &rarr;</a>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="d-flex flex-column gap-3">
+                                <div th:each="rec : ${recommendations}" class="card border p-3 rounded-3 shadow-none">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">
+                                                <a th:href="@{/jobseeker/job-details(id=${rec.job.id})}" class="text-decoration-none text-dark" th:text="${rec.job.title}">Job Title</a>
+                                            </h6>
+                                            <span class="text-muted small">
+                                                <i class="bi bi-geo-alt me-1"></i><span th:text="${rec.job.location}">Location</span> &bull; 
+                                                <span class="text-success fw-semibold" th:text="'$' + ${#numbers.formatDecimal(rec.job.salary, 0, 'COMMA', 2, 'POINT')}">$85,000</span>
+                                            </span>
+                                        </div>
+                                        <span class="badge bg-primary-subtle text-primary fw-bold" th:text="'Match Score: ' + ${rec.matchScore}">Score: 3</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        <span th:each="skill : ${rec.matchedSkills}" class="badge bg-light text-primary border" th:text="${skill}">Java</span>
+                                    </div>
+                                    <div class="small text-muted" th:text="${rec.explanation}">Explanation</div>
+                                </div>
+                                <div th:if="${recommendations.empty}" class="text-center py-4 text-muted small">
+                                    Update your skills on your profile to see tailored job recommendations!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

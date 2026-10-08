@@ -1,0 +1,11 @@
+.auth-form {
+    display: grid;
+    gap: 12px;
+    max-width: 360px;
+}
+
+.auth-form input,
+.auth-form button {
+    padding: 10px;
+}
+

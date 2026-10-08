@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Job Moderation')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('jobs')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Job Postings Moderation</h2>
+                    <p class="text-muted small mb-0">Search, review, and toggle active status for all system job openings.</p>
+                </div>
+            </div>
+
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle datatable">
+                        <thead class="table-light small text-uppercase">
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Employer ID</th>
+                                <th>Location</th>
+                                <th>Type</th>
+                                <th>Salary</th>
+                                <th>Status</th>
+                                <th class="text-end">Moderation (Soft Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="job : ${jobs}">
+                                <td class="font-monospace text-muted" th:text="${job.id}">1</td>
+                                <td>
+                                    <strong><span th:text="${job.title}">Senior Java Developer</span></strong>
+                                    <div class="small text-muted text-truncate" style="max-width: 260px;" th:text="${job.description}">Description</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary font-monospace" th:text="'Emp #' + ${job.employerId}">Emp #2</span>
+                                </td>
+                                <td th:text="${job.location}">Bangalore</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border" th:text="${job.jobType}">Full Time</span>
+                                </td>
+                                <td class="fw-semibold text-success" th:text="'$' + ${#numbers.formatDecimal(job.salary, 0, 'COMMA', 2, 'POINT')}">$85,000.00</td>
+                                <td>
+                                    <span th:if="${job.isActive()}" class="badge badge-status badge-open">OPEN</span>
+                                    <span th:if="${!job.isActive()}" class="badge badge-status badge-closed" th:text="${job.status}">CLOSED</span>
+                                </td>
+                                <td class="text-end">
+                                    <form method="post" action="/servlet/jobs" class="d-inline">
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="id" th:value="${job.id}">
+                                        <button th:if="${job.isActive()}" type="submit" class="btn btn-sm btn-outline-danger" title="Close job posting (soft delete)">
+                                            <i class="bi bi-x-circle me-1"></i> Close Job
+                                        </button>
+                                        <button th:if="${!job.isActive()}" type="submit" class="btn btn-sm btn-outline-success" title="Reopen job posting">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reopen
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

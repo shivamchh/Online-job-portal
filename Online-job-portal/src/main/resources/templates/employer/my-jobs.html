@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('My Job Postings')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('my-jobs')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">My Posted Jobs</h2>
+                    <p class="text-muted small mb-0">Search, filter, edit status, or soft-delete your company's career listings.</p>
+                </div>
+                <a href="/employer/post-job" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i> Post New Job
+                </a>
+            </div>
+
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle datatable">
+                        <thead class="table-light small text-uppercase">
+                            <tr>
+                                <th>ID</th>
+                                <th>Job Title</th>
+                                <th>Location</th>
+                                <th>Type</th>
+                                <th>Salary</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions (Soft Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="job : ${jobs}">
+                                <td class="font-monospace text-muted" th:text="${job.id}">1</td>
+                                <td>
+                                    <strong><span th:text="${job.title}">Senior Java Developer</span></strong>
+                                    <div class="small text-muted text-truncate" style="max-width: 280px;" th:text="${job.requirements}">Java, Spring</div>
+                                </td>
+                                <td th:text="${job.location}">Bangalore</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border" th:text="${job.jobType}">Full Time</span>
+                                </td>
+                                <td class="fw-semibold text-success" th:text="'$' + ${#numbers.formatDecimal(job.salary, 0, 'COMMA', 2, 'POINT')}">$85,000</td>
+                                <td>
+                                    <span th:if="${job.isActive()}" class="badge badge-status badge-open">OPEN</span>
+                                    <span th:if="${!job.isActive()}" class="badge badge-status badge-closed" th:text="${job.status}">CLOSED</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <form method="post" action="/servlet/jobs" class="d-inline">
+                                            <input type="hidden" name="action" value="toggle">
+                                            <input type="hidden" name="id" th:value="${job.id}">
+                                            <button th:if="${job.isActive()}" type="submit" class="btn btn-sm btn-outline-warning" title="Close job for new applicants">
+                                                <i class="bi bi-pause-circle"></i> Pause
+                                            </button>
+                                            <button th:if="${!job.isActive()}" type="submit" class="btn btn-sm btn-outline-success" title="Reactivate job">
+                                                <i class="bi bi-play-circle"></i> Reopen
+                                            </button>
+                                        </form>
+
+                                        <form method="post" action="/servlet/jobs" class="d-inline">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" th:value="${job.id}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Mark inactive (soft delete preserving candidate applications)"
+                                                    onclick="return confirm('Soft-delete this job? Applications will remain safely preserved.')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

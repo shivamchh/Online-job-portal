@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('My Profile & Resume')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('profile')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Applicant Profile & Resume Management</h2>
+                    <p class="text-muted small mb-0">Update your contact information, credentials, default resume, and technical skills.</p>
+                </div>
+            </div>
+
+            <!-- Flash alerts -->
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-person-lines-fill text-primary"></i> Edit Profile Details
+                            </h5>
+                            <span class="badge bg-primary-subtle text-primary font-monospace">@MultipartConfig Form</span>
+                        </div>
+
+                        <form method="post" action="/servlet/profile" enctype="multipart/form-data" class="needs-validation" novalidate id="profileForm">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Full Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" name="name" class="form-control" 
+                                           th:value="${user != null ? user.name : userName}" required minlength="2">
+                                    <div class="invalid-feedback">Full name is required (min 2 characters).</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Email Address</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                        <input type="email" name="email" class="form-control" 
+                                               th:value="${user != null ? user.email : ''}" required>
+                                        <div class="invalid-feedback">Please enter a valid email address.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Phone Number</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                        <input type="tel" name="phone" class="form-control" 
+                                               th:value="${user != null ? user.phone : ''}" placeholder="e.g. 9876543210">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Default Resume Section -->
+                            <div class="mb-3 p-3 bg-light rounded-3 border">
+                                <label class="form-label small fw-semibold d-flex align-items-center gap-2">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Default Resume (PDF / DOCX, max 2 MB)
+                                </label>
+                                <input type="file" name="resumeFile" class="form-control" accept=".pdf,.docx">
+                                <div class="form-text small">Upload your latest resume to use across 1-click quick applications.</div>
+
+                                <!-- Current Uploaded Resume Status -->
+                                <div th:if="${user != null and user.defaultResumePath != null and !user.defaultResumePath.isEmpty()}" class="mt-2 d-flex align-items-center gap-2">
+                                    <span class="badge bg-success-subtle text-success border">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Current File Attached:
+                                    </span>
+                                    <a th:href="@{/servlet/resume-download(path=${user.defaultResumePath})}" 
+                                       class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="bi bi-download me-1"></i> Download Stored Resume
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label small fw-semibold">Technical Skills & Specialties</label>
+                                <textarea name="skills" rows="3" class="form-control" 
+                                          placeholder="e.g. Java, Spring Boot, MySQL, REST API, React, Docker" 
+                                          th:text="${user != null ? user.skills : skills}"></textarea>
+                                <div class="form-text small">
+                                    Separate individual skills with commas. Our recommendation algorithm matches these keywords directly against open employer positions.
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                                    <i class="bi bi-save me-1"></i> Save Profile & Resume
+                                </button>
+                                <a href="/jobseeker/dashboard" class="btn btn-outline-secondary px-3">
+                                    Back to Dashboard
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+                        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-lightning-charge-fill text-warning"></i> Skill Match & Recommendation Preview
+                        </h6>
+                        <p class="text-muted small">
+                            Active parsed skills in candidate profile:
+                        </p>
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            <span th:each="sk : ${#strings.arraySplit((user != null and user.skills != null) ? user.skills : (skills != null ? skills : ''), ',')}" 
+                                  class="badge bg-primary-subtle text-primary border font-monospace" 
+                                  th:text="${#strings.trim(sk)}">Java</span>
+                            <span th:if="${(user == null or user.skills == null or user.skills.isEmpty()) and (skills == null or skills.isEmpty())}" 
+                                  class="text-muted small italic">No skills listed yet</span>
+                        </div>
+                        <a href="/jobseeker/recommendations" class="btn btn-outline-primary btn-sm w-100">
+                            View Matching Jobs &rarr;
+                        </a>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+                        <h6 class="fw-bold mb-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-lock-fill text-success"></i> Data Validation Rules
+                        </h6>
+                        <ul class="text-muted small ps-3 mb-0">
+                            <li class="mb-1"><strong>Server-side validation:</strong> Enforced by <code>ValidationUtil</code>.</li>
+                            <li class="mb-1"><strong>File security:</strong> File extensions strictly checked for <code>.pdf</code> and <code>.docx</code>.</li>
+                            <li class="mb-1"><strong>File size limit:</strong> Capped at 2 MB via <code>@MultipartConfig</code>.</li>
+                            <li class="mb-1"><strong>Safe file storage:</strong> UUID prefix prevents file collision or path traversal.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    (function () {
+        'use strict';
+        var form = document.getElementById('profileForm');
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Post New Job')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="dashboard-wrapper">
+    <div th:replace="~{fragments/layout :: sidebar('post-job')}"></div>
+
+    <main class="dashboard-content">
+        <div class="container-fluid p-0">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Create Job Opening</h2>
+                    <p class="text-muted small mb-0">Publish a new career opportunity to thousands of qualified seekers.</p>
+                </div>
+            </div>
+
+            <div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+                        <form id="postJobForm" method="post" action="/servlet/jobs" class="needs-validation" novalidate>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Job Title</label>
+                                <input type="text" name="title" class="form-control" placeholder="e.g. Senior Java Software Engineer" required minlength="3">
+                                <div class="invalid-feedback">Job title is required (min 3 chars).</div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Location / Office</label>
+                                    <input type="text" name="location" class="form-control" placeholder="e.g. Bangalore, Delhi, Remote" required>
+                                    <div class="invalid-feedback">Location is required.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Employment Type</label>
+                                    <select name="jobType" class="form-select" required>
+                                        <option value="Full Time" selected>Full Time</option>
+                                        <option value="Part Time">Part Time</option>
+                                        <option value="Remote">Remote</option>
+                                        <option value="Contract">Contract</option>
+                                        <option value="Internship">Internship</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Annual Salary ($ / USD)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" name="salary" class="form-control" placeholder="e.g. 75000" required min="0">
+                                    <div class="invalid-feedback">Please enter a valid non-negative salary amount.</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Technical Requirements & Skills</label>
+                                <input type="text" name="requirements" class="form-control" placeholder="Comma separated, e.g. Java, Spring Boot, MySQL, REST API, Docker" required>
+                                <div class="form-text">These keywords power our candidate recommendation algorithm.</div>
+                                <div class="invalid-feedback">Requirements are required.</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Detailed Job Description</label>
+                                <textarea name="description" rows="5" class="form-control" placeholder="Describe the role, responsibilities, and qualifications..." required minlength="10"></textarea>
+                                <div class="invalid-feedback">Description is required (min 10 chars).</div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold">
+                                    <i class="bi bi-cloud-arrow-up me-1"></i> Publish Job Opening
+                                </button>
+                                <a href="/employer/dashboard" class="btn btn-outline-secondary px-4 py-2">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+                        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle-fill text-primary"></i> Posting Best Practices
+                        </h6>
+                        <ul class="text-muted small ps-3 mb-0">
+                            <li class="mb-2">Include exact skill keywords (e.g. <code>Java</code>, <code>React</code>) to maximize AI match scoring.</li>
+                            <li class="mb-2">Specify realistic salary ranges to increase candidate conversion.</li>
+                            <li class="mb-2">All postings are validated server-side in <code>ValidationUtil</code> and saved with parameterized JDBC queries.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    (function () {
+        'use strict';
+        var form = document.getElementById('postJobForm');
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    })();
+</script>
+</body>
+</html>
