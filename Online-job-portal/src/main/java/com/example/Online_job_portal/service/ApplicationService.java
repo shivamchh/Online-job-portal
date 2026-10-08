@@ -44,9 +44,17 @@ public class ApplicationService {
     }
 
     public Application applyForJob(int jobId, int jobSeekerId, String resumePath, String seekerName) throws ApplicationException {
+        return applyForJob(jobId, jobSeekerId, resumePath, seekerName, null);
+    }
+
+    public Application applyForJob(int jobId, int jobSeekerId, String resumePath, String seekerName, String coverLetter) throws ApplicationException {
         if (applicationDAO.hasUserApplied(jobId, jobSeekerId)) {
             throw new ApplicationException("You have already applied for this job!");
         }
+
+        String initialNotes = (coverLetter != null && !coverLetter.isBlank())
+                ? "Cover Letter: " + coverLetter.trim()
+                : "Initial application submission";
 
         Application application = new Application(
                 0,
@@ -56,7 +64,7 @@ public class ApplicationService {
                 "SUBMITTED",
                 LocalDate.now(),
                 LocalDate.now(),
-                "Initial application submission"
+                initialNotes
         );
 
         applicationDAO.save(application);

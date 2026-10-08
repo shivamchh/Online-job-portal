@@ -100,6 +100,34 @@ public class JobServlet extends HttpServlet {
             return;
         }
 
+        // Handle Job Approval (Admin Action)
+        if ("approve".equalsIgnoreCase(action)) {
+            String idStr = req.getParameter("id");
+            if (idStr != null && jobService != null) {
+                int jobId = Integer.parseInt(idStr);
+                jobService.setJobStatus(jobId, "APPROVED");
+                if (activityLogger != null) {
+                    activityLogger.log(employerId, userName, "JOB_APPROVE", "Approved job ID #" + jobId + " (Status: APPROVED)");
+                }
+                resp.sendRedirect(req.getContextPath() + "/admin/jobs?success=" + encode("Job #" + jobId + " approved successfully! Current status: APPROVED"));
+                return;
+            }
+        }
+
+        // Handle Job Rejection (Admin Action)
+        if ("reject".equalsIgnoreCase(action)) {
+            String idStr = req.getParameter("id");
+            if (idStr != null && jobService != null) {
+                int jobId = Integer.parseInt(idStr);
+                jobService.setJobStatus(jobId, "REJECTED");
+                if (activityLogger != null) {
+                    activityLogger.log(employerId, userName, "JOB_REJECT", "Rejected job ID #" + jobId + " (Status: REJECTED)");
+                }
+                resp.sendRedirect(req.getContextPath() + "/admin/jobs?success=" + encode("Job #" + jobId + " rejected. Current status: REJECTED"));
+                return;
+            }
+        }
+
         // Handle Soft Delete
         if ("delete".equalsIgnoreCase(action)) {
             String idStr = req.getParameter("id");
@@ -113,6 +141,38 @@ public class JobServlet extends HttpServlet {
             String redirectUrl = "ADMIN".equalsIgnoreCase(role) ? "/admin/jobs" : "/employer/my-jobs";
             resp.sendRedirect(req.getContextPath() + redirectUrl + "?success=" + encode("Job marked as inactive (soft delete applied)."));
             return;
+        }
+
+        // Handle Job Update (Edit Details)
+        if ("update".equalsIgnoreCase(action)) {
+            String idStr = req.getParameter("id");
+            String title = req.getParameter("title");
+            String description = req.getParameter("description");
+            String requirements = req.getParameter("requirements");
+            String salaryStr = req.getParameter("salary");
+            String location = req.getParameter("location");
+            String jobType = req.getParameter("jobType");
+
+            if (idStr != null && ValidationUtil.isNotBlank(title) && ValidationUtil.isNotBlank(description) && jobService != null) {
+                int jobId = Integer.parseInt(idStr);
+                double salary = 0.0;
+                try {
+                    salary = Double.parseDouble(salaryStr);
+                } catch (Exception ignored) {}
+
+                jobService.updateJobDetails(jobId, title.trim(), description.trim(),
+                        requirements != null ? requirements.trim() : "",
+                        salary,
+                        location != null ? location.trim() : "Remote",
+                        jobType != null ? jobType.trim() : "Full Time");
+
+                if (activityLogger != null) {
+                    activityLogger.log(employerId, userName, "JOB_UPDATE", "Updated job details for #" + jobId);
+                }
+                String redirectUrl = "ADMIN".equalsIgnoreCase(role) ? "/admin/jobs" : "/employer/my-jobs";
+                resp.sendRedirect(req.getContextPath() + redirectUrl + "?success=" + encode("Job #" + jobId + " updated successfully!"));
+                return;
+            }
         }
 
         // Handle Job Creation

@@ -63,6 +63,18 @@ public class EmployerController {
         model.addAttribute("success", success);
         model.addAttribute("error", error);
 
+        List<User> candidates = new ArrayList<>();
+        for (Application app : myApplications) {
+            Optional<User> u = userService.findUserById(app.getJobSeekerId());
+            if (u.isPresent() && candidates.stream().noneMatch(c -> c.getId() == u.get().getId())) {
+                candidates.add(u.get());
+            }
+        }
+        if (candidates.isEmpty()) {
+            userService.findUserById(3).ifPresent(candidates::add);
+        }
+        model.addAttribute("candidates", candidates);
+
         model.addAttribute("jobs", myJobs);
         model.addAttribute("applications", myApplications);
         model.addAttribute("totalJobsCount", myJobs.size());
@@ -110,6 +122,20 @@ public class EmployerController {
         model.addAttribute("error", error);
         model.addAttribute("applications", apps);
         return "employer/applications";
+    }
+
+    @PostMapping("/applications/update-status")
+    public String updateApplicationStatus(@RequestParam int applicationId,
+                                          @RequestParam String status,
+                                          @RequestParam(required = false) String notes,
+                                          HttpSession session) {
+        String reviewerName = (String) session.getAttribute("userName");
+        try {
+            applicationService.updateApplicationStatus(applicationId, status, notes, reviewerName);
+            return "redirect:/employer/applications?success=" + encode("Application #" + applicationId + " updated to " + status);
+        } catch (Exception e) {
+            return "redirect:/employer/applications?error=" + encode(e.getMessage());
+        }
     }
 
     @GetMapping("/messages")

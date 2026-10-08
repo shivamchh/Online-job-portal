@@ -14,14 +14,14 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h2 class="fw-bold mb-1">Employer Dashboard</h2>
-                    <p class="text-muted small mb-0">Welcome back, <strong th:text="${userName}">Employer</strong>. Manage your postings and applicant pipeline.</p>
+                    <p class="text-muted small mb-0">Welcome back, <strong th:text="${userName}">Employer</strong>. Manage your career openings, candidate pipeline, and direct communications.</p>
                 </div>
                 <div class="d-flex gap-2">
                     <a href="/employer/post-job" class="btn btn-primary btn-sm">
                         <i class="bi bi-plus-circle me-1"></i> Post New Job
                     </a>
-                    <a href="/employer/applications" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-people me-1"></i> View Applicants
+                    <a href="/employer/messages" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-chat-dots me-1"></i> Open Inbox
                     </a>
                 </div>
             </div>
@@ -29,23 +29,23 @@
             <!-- Flash alerts -->
             <div th:replace="~{fragments/layout :: flashMessages}"></div>
 
-            <!-- Metrics -->
+            <!-- Metrics Cards -->
             <div class="row g-3 mb-4">
-                <div class="col-sm-6 col-xl-4">
+                <div class="col-sm-6 col-xl-3">
                     <div class="card stat-card bg-white p-3 h-100">
                         <div class="d-flex align-items-center">
                             <div class="stat-icon bg-primary-subtle text-primary me-3">
                                 <i class="bi bi-briefcase-fill"></i>
                             </div>
                             <div>
-                                <span class="text-muted small fw-semibold text-uppercase">My Active Postings</span>
+                                <span class="text-muted small fw-semibold text-uppercase">Total Postings</span>
                                 <h3 class="fw-bold mb-0 text-dark" th:text="${totalJobsCount}">5</h3>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-sm-6 col-xl-4">
+                <div class="col-sm-6 col-xl-3">
                     <div class="card stat-card bg-white p-3 h-100">
                         <div class="d-flex align-items-center">
                             <div class="stat-icon bg-warning-subtle text-warning me-3">
@@ -59,85 +59,303 @@
                     </div>
                 </div>
 
-                <div class="col-sm-6 col-xl-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card stat-card bg-white p-3 h-100">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-success-subtle text-success me-3">
+                                <i class="bi bi-chat-left-text-fill"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Unread Messages</span>
+                                <h3 class="fw-bold mb-0 text-dark" th:text="${unreadMessagesCount}">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-3">
                     <div class="card stat-card bg-white p-3 h-100">
                         <div class="d-flex align-items-center">
                             <div class="stat-icon bg-info-subtle text-info me-3">
-                                <i class="bi bi-graph-up-arrow"></i>
+                                <i class="bi bi-bell-fill"></i>
                             </div>
                             <div>
-                                <span class="text-muted small fw-semibold text-uppercase">Analytics & Graphs</span>
-                                <h6 class="mb-0 mt-1"><a href="/employer/statistics" class="text-decoration-none">View Live Charts &rarr;</a></h6>
+                                <span class="text-muted small fw-semibold text-uppercase">Notifications</span>
+                                <h3 class="fw-bold mb-0 text-dark" th:text="${unreadCount}">0</h3>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Recent Postings & Recent Applications Grid -->
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
-                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                            <h5 class="fw-bold mb-0">My Recent Postings</h5>
-                            <a href="/employer/my-jobs" class="small text-primary text-decoration-none">See All &rarr;</a>
+            <!-- 5. Application Statistics: Live Chart.js Visuals (Employer Feature 5) -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">
+                                <i class="bi bi-bar-chart-fill text-primary me-2"></i> Monthly Job Postings
+                            </h5>
+                            <span class="badge bg-primary-subtle text-primary">Live Trend</span>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                <div th:each="job : ${jobs}" class="list-group-item p-3">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <h6 class="fw-bold mb-0" th:text="${job.title}">Job Title</h6>
-                                        <span th:if="${job.isActive()}" class="badge badge-status badge-open">OPEN</span>
-                                        <span th:if="${!job.isActive()}" class="badge badge-status badge-closed" th:text="${job.status}">CLOSED</span>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="dashMonthlyJobsCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">
+                                <i class="bi bi-pie-chart-fill text-warning me-2"></i> Pipeline Distribution
+                            </h5>
+                            <span class="badge bg-warning-subtle text-dark">Status Ratio</span>
+                        </div>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="dashStatusCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1 & 4. Job Management & Posting History Table (Employer Feature 1 & 4) -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                            <i class="bi bi-list-check text-primary"></i> Job Management & Posting History
+                        </h5>
+                        <p class="text-muted small mb-0">Manage current job postings with options to edit details, toggle status, or soft-delete.</p>
+                    </div>
+                    <a href="/employer/post-job" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i> Post New Job
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small text-uppercase">
+                            <tr>
+                                <th>ID</th>
+                                <th>Job Title</th>
+                                <th>Location & Type</th>
+                                <th>Salary</th>
+                                <th>Status</th>
+                                <th>Posted Date</th>
+                                <th class="text-end">Actions (Edit / Toggle / Delete)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="job : ${jobs}">
+                                <td class="font-monospace text-muted" th:text="${job.id}">1</td>
+                                <td>
+                                    <strong><span th:text="${job.title}">Senior Java Developer</span></strong>
+                                    <div class="small text-muted text-truncate" style="max-width: 260px;" th:text="${job.requirements}">Java, Spring</div>
+                                </td>
+                                <td>
+                                    <span th:text="${job.location}">Bangalore</span> &bull; 
+                                    <span class="badge bg-light text-dark border" th:text="${job.jobType}">Full Time</span>
+                                </td>
+                                <td class="fw-semibold text-success" th:text="'$' + ${#numbers.formatDecimal(job.salary, 0, 'COMMA', 2, 'POINT')}">$85,000</td>
+                                <td>
+                                    <span th:if="${job.isActive()}" class="badge badge-status badge-open">OPEN</span>
+                                    <span th:if="${!job.isActive()}" class="badge badge-status badge-closed" th:text="${job.status}">CLOSED</span>
+                                </td>
+                                <td class="small text-muted" th:text="${job.createdAt}">2026-10-01</td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <!-- Edit Modal Trigger -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" th:data-bs-target="'#dashEditJobModal' + ${job.id}" title="Edit job">
+                                            <i class="bi bi-pencil-square"></i> Edit
+                                        </button>
+
+                                        <!-- Toggle Status Form -->
+                                        <form method="post" action="/servlet/jobs" class="d-inline">
+                                            <input type="hidden" name="action" value="toggle">
+                                            <input type="hidden" name="id" th:value="${job.id}">
+                                            <button th:if="${job.isActive()}" type="submit" class="btn btn-sm btn-outline-warning" title="Pause job">
+                                                <i class="bi bi-pause-circle"></i> Pause
+                                            </button>
+                                            <button th:if="${!job.isActive()}" type="submit" class="btn btn-sm btn-outline-success" title="Reactivate job">
+                                                <i class="bi bi-play-circle"></i> Reopen
+                                            </button>
+                                        </form>
+
+                                        <!-- Soft Delete Form -->
+                                        <form method="post" action="/servlet/jobs" class="d-inline">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" th:value="${job.id}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Soft delete job"
+                                                    onclick="return confirm('Soft-delete this job? Candidate applications will be safely preserved.')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
                                     </div>
-                                    <div class="small text-muted mb-2">
-                                        <i class="bi bi-geo-alt me-1"></i><span th:text="${job.location}">Location</span> &bull; 
-                                        <i class="bi bi-clock me-1"></i><span th:text="${job.jobType}">Full Time</span> &bull; 
-                                        <span class="text-success fw-semibold" th:text="'$' + ${#numbers.formatDecimal(job.salary, 0, 'COMMA', 2, 'POINT')}">$75,000</span>
+
+                                    <!-- Edit Job Modal -->
+                                    <div class="modal fade text-start" th:id="'dashEditJobModal' + ${job.id}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <form method="post" action="/servlet/jobs">
+                                                    <input type="hidden" name="action" value="update">
+                                                    <input type="hidden" name="id" th:value="${job.id}">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title fw-bold">
+                                                            <i class="bi bi-pencil-square text-primary me-2"></i>Edit Job #<span th:text="${job.id}">1</span>
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row g-3">
+                                                            <div class="col-md-8">
+                                                                <label class="form-label small fw-semibold">Job Title</label>
+                                                                <input type="text" name="title" class="form-control" th:value="${job.title}" required>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label class="form-label small fw-semibold">Job Type</label>
+                                                                <select name="jobType" class="form-select">
+                                                                    <option value="Full Time" th:selected="${job.jobType == 'Full Time'}">Full Time</option>
+                                                                    <option value="Part Time" th:selected="${job.jobType == 'Part Time'}">Part Time</option>
+                                                                    <option value="Remote" th:selected="${job.jobType == 'Remote'}">Remote</option>
+                                                                    <option value="Contract" th:selected="${job.jobType == 'Contract'}">Contract</option>
+                                                                    <option value="Internship" th:selected="${job.jobType == 'Internship'}">Internship</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-semibold">Location</label>
+                                                                <input type="text" name="location" class="form-control" th:value="${job.location}" required>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-semibold">Annual Salary ($)</label>
+                                                                <input type="number" step="1000" name="salary" class="form-control" th:value="${job.salary}" required>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <label class="form-label small fw-semibold">Required Skills</label>
+                                                                <input type="text" name="requirements" class="form-control" th:value="${job.requirements}" required>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <label class="form-label small fw-semibold">Job Description</label>
+                                                                <textarea name="description" rows="4" class="form-control" th:text="${job.description}" required></textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" class="btn btn-primary">
+                                                            <i class="bi bi-save me-1"></i> Save Changes
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p class="small text-secondary mb-0 text-truncate" th:text="${job.description}">Job description</p>
-                                </div>
-                                <div th:if="${jobs.empty}" class="p-4 text-center text-muted">
-                                    You have not posted any jobs yet.
-                                </div>
-                            </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${jobs == null or jobs.empty}">
+                                <td colspan="7" class="text-center py-4 text-muted small">
+                                    No job postings found. Click "Post New Job" above to create your first listing.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. Application Management & 3. Candidate Communication Grid -->
+            <div class="row g-4 mb-4">
+                <!-- 2. Application Management Interface (Employer Feature 2) -->
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-people-fill text-primary"></i> Application Management
+                            </h5>
+                            <a href="/employer/applications" class="small text-primary text-decoration-none fw-semibold">View All Pipeline &rarr;</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light small text-uppercase">
+                                    <tr>
+                                        <th>App</th>
+                                        <th>Job</th>
+                                        <th>Status</th>
+                                        <th>Resume</th>
+                                        <th style="min-width: 220px;">Review & Update</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="app : ${applications}">
+                                        <td class="font-monospace text-muted" th:text="'#' + ${app.id}">#1</td>
+                                        <td>
+                                            <span class="badge bg-secondary font-monospace" th:text="'Job #' + ${app.jobId}">Job #1</span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${app.status == 'SUBMITTED'}" class="badge badge-status badge-submitted">SUBMITTED</span>
+                                            <span th:if="${app.status == 'PENDING'}" class="badge badge-status badge-pending">PENDING</span>
+                                            <span th:if="${app.status == 'SHORTLISTED'}" class="badge badge-status badge-shortlisted">SHORTLISTED</span>
+                                            <span th:if="${app.status == 'APPROVED'}" class="badge badge-status badge-approved">APPROVED</span>
+                                            <span th:if="${app.status == 'REJECTED'}" class="badge badge-status badge-rejected">REJECTED</span>
+                                        </td>
+                                        <td>
+                                            <a th:if="${app.resumePath != null and !app.resumePath.isEmpty()}" 
+                                               th:href="@{/servlet/resume-download(file=${app.resumePath})}" 
+                                               class="btn btn-sm btn-outline-secondary py-0">
+                                                <i class="bi bi-file-earmark-arrow-down"></i>
+                                            </a>
+                                            <span th:if="${app.resumePath == null or app.resumePath.isEmpty()}" class="text-muted small">None</span>
+                                        </td>
+                                        <td>
+                                            <form method="post" action="/servlet/applications" class="d-flex align-items-center gap-1">
+                                                <input type="hidden" name="action" value="updateStatus">
+                                                <input type="hidden" name="applicationId" th:value="${app.id}">
+                                                <select name="status" class="form-select form-select-sm" style="width: 120px;">
+                                                    <option value="SUBMITTED" th:selected="${app.status == 'SUBMITTED'}">SUBMITTED</option>
+                                                    <option value="PENDING" th:selected="${app.status == 'PENDING'}">PENDING</option>
+                                                    <option value="SHORTLISTED" th:selected="${app.status == 'SHORTLISTED'}">SHORTLIST</option>
+                                                    <option value="APPROVED" th:selected="${app.status == 'APPROVED'}">APPROVE</option>
+                                                    <option value="REJECTED" th:selected="${app.status == 'REJECTED'}">REJECT</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-dark">Update</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <tr th:if="${applications == null or applications.empty}">
+                                        <td colspan="5" class="text-center py-4 text-muted small">
+                                            No candidate applications received yet.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
-                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                            <h5 class="fw-bold mb-0">Candidate Submissions</h5>
-                            <a href="/employer/applications" class="small text-primary text-decoration-none">View All Pipeline &rarr;</a>
+                <!-- 3. Candidate Communication Section (Employer Feature 3) -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-chat-dots-fill text-primary"></i> Candidate Communication
+                            </h5>
+                            <a href="/employer/messages" class="small text-primary text-decoration-none fw-semibold">Open Full Chat &rarr;</a>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                <div th:each="app : ${applications}" class="list-group-item p-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="fw-semibold">Applicant #<span th:text="${app.jobSeekerId}">3</span> for Job #<span th:text="${app.jobId}">1</span></span>
-                                        <span th:if="${app.status == 'SUBMITTED'}" class="badge badge-status badge-submitted">SUBMITTED</span>
-                                        <span th:if="${app.status == 'SHORTLISTED'}" class="badge badge-status badge-shortlisted">SHORTLISTED</span>
-                                        <span th:if="${app.status == 'APPROVED'}" class="badge badge-status badge-approved">APPROVED</span>
-                                        <span th:if="${app.status == 'REJECTED'}" class="badge badge-status badge-rejected">REJECTED</span>
-                                    </div>
-                                    <div class="small text-muted mb-2">
-                                        Applied on <span th:text="${app.appliedDate}">2026-10-01</span>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <a th:if="${app.resumePath != null and !app.resumePath.isEmpty()}"
-                                           th:href="@{/servlet/resume-download(file=${app.resumePath})}" 
-                                           class="btn btn-sm btn-outline-secondary py-0">
-                                            <i class="bi bi-file-earmark-arrow-down me-1"></i> Resume
-                                        </a>
-                                        <a href="/employer/applications" class="btn btn-sm btn-outline-primary py-0">Review Status</a>
-                                    </div>
-                                </div>
-                                <div th:if="${applications.empty}" class="p-4 text-center text-muted">
-                                    No candidate applications received yet.
-                                </div>
+                        <p class="text-muted small mb-3">Send interview invitations, feedback, or follow-ups directly to job applicants.</p>
+
+                        <form method="post" action="/servlet/messages" class="d-flex flex-column gap-3">
+                            <input type="hidden" name="returnUrl" value="/employer/dashboard">
+                            <div>
+                                <label class="form-label small fw-semibold">Select Applicant</label>
+                                <select name="receiverId" class="form-select" required>
+                                    <option th:each="c : ${candidates}" th:value="${c.id}" th:text="${c.name} + ' (' + ${c.email} + ')'">Alex Kumar (seeker@example.com)</option>
+                                </select>
                             </div>
-                        </div>
+                            <div>
+                                <label class="form-label small fw-semibold">Message Content</label>
+                                <textarea name="content" rows="4" class="form-control" placeholder="Write interview invitation, feedback, or message details..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                                <i class="bi bi-send-fill me-1"></i> Send Candidate Message
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -147,5 +365,53 @@
 </div>
 
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+<script>
+    fetch('/servlet/statistics')
+        .then(response => response.json())
+        .then(data => {
+            // Monthly Jobs Bar Chart
+            const barCtx = document.getElementById('dashMonthlyJobsCanvas');
+            if (barCtx) {
+                new Chart(barCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data.jobsByMonth),
+                        datasets: [{
+                            label: 'Jobs Posted',
+                            data: Object.values(data.jobsByMonth),
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                    }
+                });
+            }
+
+            // Application Status Doughnut
+            const doughnutCtx = document.getElementById('dashStatusCanvas');
+            if (doughnutCtx) {
+                new Chart(doughnutCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(data.applicationStatuses),
+                        datasets: [{
+                            data: Object.values(data.applicationStatuses),
+                            backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        })
+        .catch(err => console.log('Analytics loading:', err));
+</script>
 </body>
 </html>

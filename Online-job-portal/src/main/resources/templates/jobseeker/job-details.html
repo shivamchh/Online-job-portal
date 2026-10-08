@@ -59,16 +59,19 @@
                         <h5 class="fw-bold mb-2">Apply for this Job Opening</h5>
                         <p class="text-muted small mb-3">Submit your resume in PDF or DOCX format (max 2 MB).</p>
 
-                        <form method="post" action="/servlet/resume-upload" enctype="multipart/form-data" class="row g-3 align-items-center">
+                        <form method="post" action="/servlet/resume-upload" enctype="multipart/form-data">
                             <input type="hidden" name="jobId" th:value="${job.id}">
-                            <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Resume Document (PDF / DOCX, max 2 MB)</label>
                                 <input type="file" name="resumeFile" accept=".pdf,.docx" class="form-control" required>
                             </div>
-                            <div class="col-md-4">
-                                <button type="submit" class="btn btn-primary w-100 fw-semibold">
-                                    <i class="bi bi-send-fill me-1"></i> Submit Resume
-                                </button>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Cover Letter / Note to Employer (Optional)</label>
+                                <textarea name="coverLetter" rows="3" class="form-control" placeholder="Introduce yourself, key strengths, and why you are a great fit..."></textarea>
                             </div>
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                                <i class="bi bi-send-fill me-1"></i> Submit Application & Resume
+                            </button>
                         </form>
                     </div>
                 </div>

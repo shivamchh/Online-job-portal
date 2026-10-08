@@ -1,5 +1,6 @@
 package com.example.Online_job_portal.servlet;
 
+import com.example.Online_job_portal.model.User;
 import com.example.Online_job_portal.service.UserService;
 import com.example.Online_job_portal.util.ActivityLogger;
 import jakarta.servlet.ServletException;
@@ -54,6 +55,55 @@ public class UserServlet extends HttpServlet {
 
         String idStr = req.getParameter("id");
         String action = req.getParameter("action");
+
+        // Create new user (Admin functionality: Input: User details -> Output: Confirmation message)
+        if ("create".equalsIgnoreCase(action)) {
+            String name = req.getParameter("name");
+            String email = req.getParameter("email");
+            String password = req.getParameter("password");
+            String phone = req.getParameter("phone");
+            String userRole = req.getParameter("role");
+
+            if (userService != null) {
+                try {
+                    if (password == null || password.isBlank()) {
+                        password = "password123";
+                    }
+                    User created = userService.registerUser(name, email, password, phone, userRole);
+                    if (activityLogger != null) {
+                        activityLogger.log(0, adminName, "USER_CREATE", "Admin created user #" + created.getId() + " (" + name + ", Role: " + userRole + ")");
+                    }
+                    resp.sendRedirect(req.getContextPath() + "/admin/users?success=" + encode("User account created successfully! Name: " + name + ", Role: " + userRole));
+                    return;
+                } catch (Exception e) {
+                    resp.sendRedirect(req.getContextPath() + "/admin/users?error=" + encode(e.getMessage()));
+                    return;
+                }
+            }
+        }
+
+        // Update existing user (Admin functionality: Input: User details -> Output: Confirmation message)
+        if ("update".equalsIgnoreCase(action)) {
+            String name = req.getParameter("name");
+            String email = req.getParameter("email");
+            String phone = req.getParameter("phone");
+            String userRole = req.getParameter("role");
+
+            if (idStr != null && userService != null) {
+                try {
+                    int targetUserId = Integer.parseInt(idStr);
+                    userService.updateUserAccount(targetUserId, name, email, phone, userRole);
+                    if (activityLogger != null) {
+                        activityLogger.log(0, adminName, "USER_UPDATE", "Admin updated user #" + targetUserId + " (" + name + ", Role: " + userRole + ")");
+                    }
+                    resp.sendRedirect(req.getContextPath() + "/admin/users?success=" + encode("User #" + targetUserId + " (" + name + ") updated successfully! Role: " + userRole));
+                    return;
+                } catch (Exception e) {
+                    resp.sendRedirect(req.getContextPath() + "/admin/users?error=" + encode(e.getMessage()));
+                    return;
+                }
+            }
+        }
 
         if (idStr != null && userService != null) {
             try {

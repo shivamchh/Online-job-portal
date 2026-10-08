@@ -12,34 +12,48 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Repository
 public class UserDAO implements DAO<User> {
 
-    private final List<User> users = new ArrayList<>();
+    private final List<User> users = new CopyOnWriteArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger(10);
-    private boolean useMemoryStore;
+    private volatile boolean useMemoryStore = false;
 
     public UserDAO() {
+        seedInitialUsers();
+    }
+
+    public boolean isUseMemoryStore() {
+        return useMemoryStore;
+    }
+
+    public void setUseMemoryStore(boolean useMemoryStore) {
+        this.useMemoryStore = useMemoryStore;
     }
 
     public synchronized void seedInitialUsers() {
         if (!users.isEmpty()) return;
         String saltAdmin = PasswordUtil.generateSalt();
+        String saltAdmin2 = PasswordUtil.generateSalt();
         String saltEmployer = PasswordUtil.generateSalt();
+        String saltEmployer2 = PasswordUtil.generateSalt();
         String saltSeeker = PasswordUtil.generateSalt();
         String saltPriya = PasswordUtil.generateSalt();
 
-        users.add(new Admin(1, "Admin User", "admin@portal.com", PasswordUtil.hashPassword("admin123", saltAdmin), saltAdmin, "9876543210", "ACTIVE", "", ""));
-        users.add(new Employer(2, "TechCorp Solutions", "employer@techcorp.com", PasswordUtil.hashPassword("employer123", saltEmployer), saltEmployer, "9876543211", "ACTIVE", "", ""));
-        users.add(new JobSeeker(3, "Alex Kumar", "seeker@example.com", PasswordUtil.hashPassword("seeker123", saltSeeker), saltSeeker, "9876543212", "ACTIVE", "Java, Spring Boot, MySQL, REST API", "alex_resume.pdf"));
-        users.add(new JobSeeker(4, "Priya Sharma", "priya@example.com", PasswordUtil.hashPassword("priya123", saltPriya), saltPriya, "9876543213", "ACTIVE", "Python, Django, React, AWS", "priya_resume.pdf"));
+        users.add(new Admin(101, "Admin User", "admin@portal.com", PasswordUtil.hashPassword("admin123", saltAdmin), saltAdmin, "9876543210", "ACTIVE", "", ""));
+        users.add(new Admin(102, "Admin Example", "admin@example.com", PasswordUtil.hashPassword("admin123", saltAdmin2), saltAdmin2, "9876543210", "ACTIVE", "", ""));
+        users.add(new Employer(103, "TechCorp Solutions", "employer@techcorp.com", PasswordUtil.hashPassword("employer123", saltEmployer), saltEmployer, "9876543211", "ACTIVE", "", ""));
+        users.add(new Employer(104, "Global Tech", "employer@example.com", PasswordUtil.hashPassword("employer123", saltEmployer2), saltEmployer2, "9876543211", "ACTIVE", "", ""));
+        users.add(new JobSeeker(105, "Alex Kumar", "seeker@example.com", PasswordUtil.hashPassword("seeker123", saltSeeker), saltSeeker, "9876543212", "ACTIVE", "Java, Spring Boot, MySQL, REST API", "alex_resume.pdf"));
+        users.add(new JobSeeker(106, "Priya Sharma", "priya@example.com", PasswordUtil.hashPassword("priya123", saltPriya), saltPriya, "9876543213", "ACTIVE", "Python, Django, React, AWS", "priya_resume.pdf"));
     }
 
     @Override
     public void save(User user) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             saveInMemory(user);
             return;
         }
@@ -65,6 +79,7 @@ public class UserDAO implements DAO<User> {
                     user.setId(rs.getInt(1));
                 }
             }
+            saveInMemory(user);
         } catch (SQLException e) {
             useMemoryStore = true;
             saveInMemory(user);
@@ -75,16 +90,29 @@ public class UserDAO implements DAO<User> {
         if (user.getId() <= 0) {
             user.setId(idCounter.incrementAndGet());
         }
-        users.removeIf(u -> u.getId() == user.getId() || u.getEmail().equalsIgnoreCase(user.getEmail()));
+        users.removeIf(u -> u.getEmail().equalsIgnoreCase(user.getEmail()));
         users.add(user);
+    }
+
+    private Optional<User> findInMemoryById(int id) {
+        return users.stream()
+                .filter(user -> user.getId() == id)
+                .findFirst();
+    }
+
+    private Optional<User> findInMemoryByEmail(String email) {
+        if (email == null) return Optional.empty();
+        String trimmed = email.trim();
+        return users.stream()
+                .filter(user -> user.getEmail().equalsIgnoreCase(trimmed) ||
+                        ("admin".equalsIgnoreCase(trimmed) && ("admin@portal.com".equalsIgnoreCase(user.getEmail()) || "admin@example.com".equalsIgnoreCase(user.getEmail()))))
+                .findFirst();
     }
 
     @Override
     public Optional<User> findById(int id) {
-        if (useMemoryStore) {
-            return users.stream()
-                    .filter(user -> user.getId() == id)
-                    .findFirst();
+        if (useMemoryStore || !DBConnection.isAvailable()) {
+            return findInMemoryById(id);
         }
 
         String sql = "SELECT * FROM users WHERE id = ?";
@@ -95,24 +123,25 @@ public class UserDAO implements DAO<User> {
             statement.setInt(1, id);
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    return Optional.of(mapUser(resultSet));
+                    User u = mapUser(resultSet);
+                    saveInMemory(u);
+                    return Optional.of(u);
                 }
             }
         } catch (SQLException e) {
             useMemoryStore = true;
-            return users.stream()
-                    .filter(user -> user.getId() == id)
-                    .findFirst();
+            return findInMemoryById(id);
         }
 
-        return Optional.empty();
+        return findInMemoryById(id);
     }
 
     public Optional<User> findByEmail(String email) {
-        if (useMemoryStore) {
-            return users.stream()
-                    .filter(user -> user.getEmail().equalsIgnoreCase(email))
-                    .findFirst();
+        if (email == null) return Optional.empty();
+        String trimmed = email.trim();
+
+        if (useMemoryStore || !DBConnection.isAvailable()) {
+            return findInMemoryByEmail(trimmed);
         }
 
         String sql = "SELECT * FROM users WHERE email = ?";
@@ -120,25 +149,25 @@ public class UserDAO implements DAO<User> {
         try (Connection connection = DBConnection.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
-            statement.setString(1, email);
+            statement.setString(1, trimmed);
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    return Optional.of(mapUser(resultSet));
+                    User u = mapUser(resultSet);
+                    saveInMemory(u);
+                    return Optional.of(u);
                 }
             }
         } catch (SQLException e) {
             useMemoryStore = true;
-            return users.stream()
-                    .filter(user -> user.getEmail().equalsIgnoreCase(email))
-                    .findFirst();
+            return findInMemoryByEmail(trimmed);
         }
 
-        return Optional.empty();
+        return findInMemoryByEmail(trimmed);
     }
 
     @Override
     public List<User> findAll() {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return new ArrayList<>(users);
         }
 
@@ -153,7 +182,10 @@ public class UserDAO implements DAO<User> {
                 result.add(mapUser(resultSet));
             }
 
-            return result;
+            if (!result.isEmpty()) {
+                return result;
+            }
+            return new ArrayList<>(users);
         } catch (SQLException e) {
             useMemoryStore = true;
             return new ArrayList<>(users);
@@ -167,8 +199,8 @@ public class UserDAO implements DAO<User> {
     }
 
     public void updateSkills(int userId, String skills) {
+        findInMemoryById(userId).ifPresent(u -> u.setSkills(skills));
         if (useMemoryStore) {
-            findById(userId).ifPresent(u -> u.setSkills(skills));
             return;
         }
 
@@ -180,21 +212,21 @@ public class UserDAO implements DAO<User> {
             statement.executeUpdate();
         } catch (SQLException e) {
             useMemoryStore = true;
-            findById(userId).ifPresent(u -> u.setSkills(skills));
         }
     }
 
     public void updateProfile(int userId, String name, String email, String phone, String skills, String defaultResumePath) {
+        findInMemoryById(userId).ifPresent(u -> {
+            u.setName(name);
+            u.setEmail(email);
+            u.setPhone(phone);
+            u.setSkills(skills);
+            if (defaultResumePath != null && !defaultResumePath.isBlank()) {
+                u.setDefaultResumePath(defaultResumePath);
+            }
+        });
+
         if (useMemoryStore) {
-            findById(userId).ifPresent(u -> {
-                u.setName(name);
-                u.setEmail(email);
-                u.setPhone(phone);
-                u.setSkills(skills);
-                if (defaultResumePath != null && !defaultResumePath.isBlank()) {
-                    u.setDefaultResumePath(defaultResumePath);
-                }
-            });
             return;
         }
 
@@ -219,21 +251,12 @@ public class UserDAO implements DAO<User> {
             statement.executeUpdate();
         } catch (SQLException e) {
             useMemoryStore = true;
-            findById(userId).ifPresent(u -> {
-                u.setName(name);
-                u.setEmail(email);
-                u.setPhone(phone);
-                u.setSkills(skills);
-                if (defaultResumePath != null && !defaultResumePath.isBlank()) {
-                    u.setDefaultResumePath(defaultResumePath);
-                }
-            });
         }
     }
 
     public void updateResumePath(int userId, String resumePath) {
+        findInMemoryById(userId).ifPresent(u -> u.setDefaultResumePath(resumePath));
         if (useMemoryStore) {
-            findById(userId).ifPresent(u -> u.setDefaultResumePath(resumePath));
             return;
         }
 
@@ -245,7 +268,41 @@ public class UserDAO implements DAO<User> {
             statement.executeUpdate();
         } catch (SQLException e) {
             useMemoryStore = true;
-            findById(userId).ifPresent(u -> u.setDefaultResumePath(resumePath));
+        }
+    }
+
+    public void updateUserAccount(int id, String name, String email, String phone, String role) {
+        Optional<User> opt = findById(id);
+        if (opt.isPresent()) {
+            User old = opt.get();
+            User updated;
+            if ("ADMIN".equalsIgnoreCase(role)) {
+                updated = new Admin(id, name, email, old.getPassword(), old.getSalt(), phone, old.getStatus(), old.getSkills(), old.getDefaultResumePath());
+            } else if ("EMPLOYER".equalsIgnoreCase(role)) {
+                updated = new Employer(id, name, email, old.getPassword(), old.getSalt(), phone, old.getStatus(), old.getSkills(), old.getDefaultResumePath());
+            } else {
+                updated = new JobSeeker(id, name, email, old.getPassword(), old.getSalt(), phone, old.getStatus(), old.getSkills(), old.getDefaultResumePath());
+            }
+
+            users.removeIf(u -> u.getId() == id);
+            users.add(updated);
+
+            if (useMemoryStore) {
+                return;
+            }
+
+            String sql = "UPDATE users SET name = ?, email = ?, phone = ?, role = ? WHERE id = ?";
+            try (Connection connection = DBConnection.getConnection();
+                 PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, name);
+                statement.setString(2, email);
+                statement.setString(3, phone);
+                statement.setString(4, role != null ? role.toUpperCase() : "JOB_SEEKER");
+                statement.setInt(5, id);
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                useMemoryStore = true;
+            }
         }
     }
 
@@ -259,8 +316,9 @@ public class UserDAO implements DAO<User> {
     }
 
     public void setUserStatus(int id, String status) {
+        findInMemoryById(id).ifPresent(u -> u.setStatus(status));
+
         if (useMemoryStore) {
-            findById(id).ifPresent(u -> u.setStatus(status));
             return;
         }
 
@@ -272,7 +330,6 @@ public class UserDAO implements DAO<User> {
             statement.executeUpdate();
         } catch (SQLException e) {
             useMemoryStore = true;
-            findById(id).ifPresent(u -> u.setStatus(status));
         }
     }
 
@@ -283,8 +340,9 @@ public class UserDAO implements DAO<User> {
     }
 
     public void hardDeleteById(int id) {
+        users.removeIf(user -> user.getId() == id);
+
         if (useMemoryStore) {
-            users.removeIf(user -> user.getId() == id);
             return;
         }
 
@@ -295,7 +353,6 @@ public class UserDAO implements DAO<User> {
             statement.executeUpdate();
         } catch (SQLException e) {
             useMemoryStore = true;
-            users.removeIf(user -> user.getId() == id);
         }
     }
 

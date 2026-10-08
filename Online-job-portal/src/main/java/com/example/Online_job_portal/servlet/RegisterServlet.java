@@ -5,29 +5,39 @@ import com.example.Online_job_portal.service.UserService;
 import com.example.Online_job_portal.util.ActivityLogger;
 import com.example.Online_job_portal.util.ValidationUtil;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-@WebServlet(name = "RegisterServlet", urlPatterns = {"/servlet/register"})
+/**
+ * Handles new account registration via standard Java HttpServlet.
+ * Registered as a Spring @Bean via ServletRegistrationBean to guarantee dependency injection.
+ */
 public class RegisterServlet extends HttpServlet {
 
-    @Autowired
     private UserService userService;
-
-    @Autowired
     private ActivityLogger activityLogger;
+
+    public RegisterServlet() {
+    }
+
+    public RegisterServlet(UserService userService, ActivityLogger activityLogger) {
+        this.userService = userService;
+        this.activityLogger = activityLogger;
+    }
 
     @Override
     public void init() throws ServletException {
         super.init();
+        resolveDependencies();
+    }
+
+    private void resolveDependencies() {
         if (userService == null || activityLogger == null) {
             var ctx = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
             if (ctx != null) {
@@ -44,6 +54,8 @@ public class RegisterServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resolveDependencies();
+
         String name = req.getParameter("name");
         String email = req.getParameter("email");
         String password = req.getParameter("password");

@@ -46,7 +46,7 @@ public class JobDAO implements DAO<Job> {
 
     @Override
     public void save(Job job) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             saveInMemory(job);
             return;
         }
@@ -94,7 +94,7 @@ public class JobDAO implements DAO<Job> {
 
     @Override
     public Optional<Job> findById(int id) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return jobs.stream()
                     .filter(job -> job.getId() == id)
                     .findFirst();
@@ -123,7 +123,7 @@ public class JobDAO implements DAO<Job> {
 
     @Override
     public List<Job> findAll() {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return new ArrayList<>(jobs);
         }
 
@@ -147,12 +147,12 @@ public class JobDAO implements DAO<Job> {
 
     public List<Job> findAllActive() {
         return findAll().stream()
-                .filter(j -> "OPEN".equalsIgnoreCase(j.getStatus()))
+                .filter(Job::isActive)
                 .toList();
     }
 
     public List<Job> findByEmployerId(int employerId) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return jobs.stream()
                     .filter(job -> job.getEmployerId() == employerId)
                     .toList();
@@ -183,7 +183,7 @@ public class JobDAO implements DAO<Job> {
     public List<Job> searchJobs(String keyword, String location, String jobType, Double minSalary, int offset, int limit) {
         if (useMemoryStore) {
             return jobs.stream()
-                    .filter(j -> "OPEN".equalsIgnoreCase(j.getStatus()))
+                    .filter(Job::isActive)
                     .filter(j -> keyword == null || keyword.isBlank() ||
                             (j.getTitle() != null && j.getTitle().toLowerCase().contains(keyword.toLowerCase())) ||
                             (j.getDescription() != null && j.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
@@ -200,7 +200,7 @@ public class JobDAO implements DAO<Job> {
 
         String sql = """
                 SELECT * FROM jobs
-                WHERE status = 'OPEN'
+                WHERE status IN ('OPEN', 'APPROVED')
                   AND (? IS NULL OR ? = '' OR LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(requirements) LIKE ?)
                   AND (? IS NULL OR ? = '' OR LOWER(location) LIKE ?)
                   AND (? IS NULL OR ? = '' OR LOWER(job_type) = LOWER(?))
@@ -255,7 +255,7 @@ public class JobDAO implements DAO<Job> {
     public int countSearchJobs(String keyword, String location, String jobType, Double minSalary) {
         if (useMemoryStore) {
             return (int) jobs.stream()
-                    .filter(j -> "OPEN".equalsIgnoreCase(j.getStatus()))
+                    .filter(Job::isActive)
                     .filter(j -> keyword == null || keyword.isBlank() ||
                             (j.getTitle() != null && j.getTitle().toLowerCase().contains(keyword.toLowerCase())) ||
                             (j.getDescription() != null && j.getDescription().toLowerCase().contains(keyword.toLowerCase())) ||
@@ -270,7 +270,7 @@ public class JobDAO implements DAO<Job> {
 
         String sql = """
                 SELECT COUNT(*) FROM jobs
-                WHERE status = 'OPEN'
+                WHERE status IN ('OPEN', 'APPROVED')
                   AND (? IS NULL OR ? = '' OR LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(requirements) LIKE ?)
                   AND (? IS NULL OR ? = '' OR LOWER(location) LIKE ?)
                   AND (? IS NULL OR ? = '' OR LOWER(job_type) = LOWER(?))
@@ -331,6 +331,36 @@ public class JobDAO implements DAO<Job> {
         } catch (SQLException e) {
             useMemoryStore = true;
             findById(id).ifPresent(j -> j.setStatus(status));
+        }
+    }
+
+    public void updateJobDetails(int id, String title, String description, String requirements, double salary, String location, String jobType) {
+        findById(id).ifPresent(j -> {
+            j.setTitle(title);
+            j.setDescription(description);
+            j.setRequirements(requirements);
+            j.setSalary(salary);
+            j.setLocation(location);
+            j.setJobType(jobType);
+        });
+
+        if (useMemoryStore) {
+            return;
+        }
+
+        String sql = "UPDATE jobs SET title = ?, description = ?, requirements = ?, salary = ?, location = ?, job_type = ? WHERE id = ?";
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, title);
+            statement.setString(2, description);
+            statement.setString(3, requirements);
+            statement.setDouble(4, salary);
+            statement.setString(5, location);
+            statement.setString(6, jobType);
+            statement.setInt(7, id);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            useMemoryStore = true;
         }
     }
 

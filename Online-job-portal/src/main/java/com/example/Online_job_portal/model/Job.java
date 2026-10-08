@@ -119,6 +119,6 @@ public class Job {
     }
 
     public boolean isActive() {
-        return "OPEN".equalsIgnoreCase(this.status);
+        return "OPEN".equalsIgnoreCase(this.status) || "APPROVED".equalsIgnoreCase(this.status);
     }
 }

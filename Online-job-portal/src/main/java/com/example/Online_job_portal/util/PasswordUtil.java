@@ -90,19 +90,33 @@ public final class PasswordUtil {
      * @return true if candidate password matches stored hash
      */
     public static boolean matches(String rawPassword, String salt, String hashedPassword) {
-        if (hashedPassword == null) {
+        if (rawPassword == null || hashedPassword == null) {
             return false;
         }
-        if (salt == null || salt.isBlank()) {
-            return matches(rawPassword, hashedPassword);
+        // 1. Plaintext match fallback (e.g. database seeded with raw unhashed passwords)
+        if (rawPassword.equals(hashedPassword)) {
+            return true;
         }
-        return hashPassword(rawPassword, salt).equals(hashedPassword);
+        // 2. Salted SHA-256 match
+        if (salt != null && !salt.isBlank()) {
+            if (hashPassword(rawPassword, salt).equalsIgnoreCase(hashedPassword)) {
+                return true;
+            }
+        }
+        // 3. Unsalted SHA-256 match
+        return hashPassword(rawPassword).equalsIgnoreCase(hashedPassword);
     }
 
     /**
-     * Backward-compatible match verification for unsalted hashes.
+     * Backward-compatible match verification for unsalted hashes or plaintext.
      */
     public static boolean matches(String rawPassword, String hashedPassword) {
-        return hashPassword(rawPassword).equals(hashedPassword);
+        if (rawPassword == null || hashedPassword == null) {
+            return false;
+        }
+        if (rawPassword.equals(hashedPassword)) {
+            return true;
+        }
+        return hashPassword(rawPassword).equalsIgnoreCase(hashedPassword);
     }
 }

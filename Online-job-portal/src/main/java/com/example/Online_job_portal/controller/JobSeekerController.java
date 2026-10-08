@@ -69,6 +69,9 @@ public class JobSeekerController {
         model.addAttribute("notifications", notificationDAO != null ? notificationDAO.findByUserId(seekerId) : Collections.emptyList());
         model.addAttribute("recommendations", recommendations.stream().limit(4).toList());
         model.addAttribute("latestJobs", jobService.getAllActiveJobs().stream().limit(5).toList());
+        model.addAttribute("applications", myApps);
+        model.addAttribute("user", userOpt.orElse(null));
+        model.addAttribute("skills", skills);
 
         return "jobseeker/dashboard";
     }

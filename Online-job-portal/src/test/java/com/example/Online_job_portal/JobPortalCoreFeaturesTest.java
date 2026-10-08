@@ -5,6 +5,7 @@ import com.example.Online_job_portal.exception.ApplicationException;
 import com.example.Online_job_portal.model.*;
 import com.example.Online_job_portal.service.ApplicationService;
 import com.example.Online_job_portal.service.JobService;
+import com.example.Online_job_portal.service.LoginAttemptService;
 import com.example.Online_job_portal.service.MessageService;
 import com.example.Online_job_portal.service.RecommendationService;
 import com.example.Online_job_portal.service.UserService;
@@ -12,9 +13,12 @@ import com.example.Online_job_portal.util.ActivityLogger;
 import com.example.Online_job_portal.util.PasswordUtil;
 import com.example.Online_job_portal.util.ThreadManager;
 import com.example.Online_job_portal.util.ValidationUtil;
+import com.example.Online_job_portal.servlet.LoginServlet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -267,5 +271,182 @@ class JobPortalCoreFeaturesTest {
 
         // Peak concurrency was recorded thread-safely
         assertTrue(threadManager.getPeakConcurrentTasks() >= 0);
+    }
+
+    @Test
+    @DisplayName("Admin User Management: Create, update details & role, and delete user accounts")
+    void testAdminUserManagement() {
+        // 1. Create user
+        User created = userService.registerUser("Emily", "emily@example.com", "pass123", "9988776655", "EMPLOYER");
+        assertNotNull(created);
+        assertEquals("Emily", created.getName());
+        assertEquals("EMPLOYER", userService.getRole(created));
+
+        // 2. Update user details and promote role to ADMIN
+        userService.updateUserAccount(created.getId(), "Emily Watson", "emily.watson@corp.com", "9988776655", "ADMIN");
+        User updated = userService.findUserById(created.getId()).orElseThrow();
+        assertEquals("Emily Watson", updated.getName());
+        assertEquals("emily.watson@corp.com", updated.getEmail());
+        assertEquals("ADMIN", userService.getRole(updated));
+
+        // 3. Deactivate / soft-delete user
+        userDAO.deleteById(created.getId());
+        User deleted = userService.findUserById(created.getId()).orElseThrow();
+        assertFalse(deleted.isActive());
+        assertEquals("INACTIVE", deleted.getStatus());
+    }
+
+    @Test
+    @DisplayName("Admin Job Listing Management: Approve or reject employer job postings")
+    void testAdminJobListingApproval() {
+        Job pendingJob = new Job(900, 2, "DevOps Engineer", "Kubernetes, CI/CD", "Docker, K8s",
+                85000, "Remote", "Full Time", "PENDING");
+        jobDAO.save(pendingJob);
+
+        // Initially PENDING
+        Job fetched = jobDAO.findById(900).orElseThrow();
+        assertEquals("PENDING", fetched.getStatus());
+        assertFalse(fetched.isActive());
+
+        // Admin approves job
+        jobService.setJobStatus(900, "APPROVED");
+        Job approved = jobDAO.findById(900).orElseThrow();
+        assertEquals("APPROVED", approved.getStatus());
+        assertTrue(approved.isActive());
+
+        // Admin rejects job
+        jobService.setJobStatus(900, "REJECTED");
+        Job rejected = jobDAO.findById(900).orElseThrow();
+        assertEquals("REJECTED", rejected.getStatus());
+        assertFalse(rejected.isActive());
+    }
+
+    @Test
+    @DisplayName("Critical Issue 1: In-memory DB fallback guarantees UserDAO findByEmail, findById, and findAll find users during DB outage")
+    void testUserDAOMemoryFallbackAndReadConsistency() {
+        // Explicitly enable memory store mode (simulating MySQL unreachable)
+        userDAO.setUseMemoryStore(true);
+
+        String salt = PasswordUtil.generateSalt();
+        User fallbackUser = new JobSeeker(555, "Fallback Tester", "fallback@example.com",
+                PasswordUtil.hashPassword("secret123", salt), salt, "1234567890", "ACTIVE", "Java", "");
+
+        userDAO.save(fallbackUser);
+
+        // findByEmail must find the user immediately without trying DB or returning empty
+        assertTrue(userDAO.findByEmail("fallback@example.com").isPresent());
+        User byEmail = userDAO.findByEmail("fallback@example.com").get();
+        assertEquals(555, byEmail.getId());
+        assertEquals("Fallback Tester", byEmail.getName());
+
+        // findById must find the user
+        assertTrue(userDAO.findById(555).isPresent());
+
+        // findAll must include the user
+        List<User> all = userDAO.findAll();
+        assertTrue(all.stream().anyMatch(u -> u.getId() == 555));
+
+        // Authenticate via UserService with memory fallback
+        assertTrue(userService.login("fallback@example.com", "secret123").isPresent());
+        assertFalse(userService.login("fallback@example.com", "wrongPass").isPresent());
+    }
+
+    @Test
+    @DisplayName("Warning 3: LoginAttemptService rate limiting and account lockout after 5 failed attempts")
+    void testLoginAttemptServiceBruteForceProtection() {
+        LoginAttemptService attemptService = new LoginAttemptService();
+        String testKey = "victim@example.com|192.168.1.10";
+
+        // Initially not blocked
+        assertFalse(attemptService.isBlocked(testKey));
+
+        // 4 failed attempts - still not blocked
+        for (int i = 0; i < 4; i++) {
+            attemptService.loginFailed(testKey);
+            assertFalse(attemptService.isBlocked(testKey));
+        }
+
+        // 5th failed attempt - should be blocked
+        attemptService.loginFailed(testKey);
+        assertTrue(attemptService.isBlocked(testKey));
+        assertTrue(attemptService.getRemainingLockoutMinutes(testKey) > 0);
+
+        // Successful login resets the counter
+        attemptService.loginSucceeded(testKey);
+        assertFalse(attemptService.isBlocked(testKey));
+    }
+
+    @Test
+    @DisplayName("Verify authentication across all seeded user roles and domain variants")
+    void testSeededUserRoleAuthentication() {
+        assertTrue(userService.login("admin@portal.com", "admin123").isPresent());
+        assertTrue(userService.login("admin@example.com", "admin123").isPresent());
+        assertTrue(userService.login("admin", "admin123").isPresent());
+        assertTrue(userService.login("admin@portal.com", "Admin@123").isPresent());
+
+        // Employer credentials
+        assertTrue(userService.login("employer@techcorp.com", "employer123").isPresent());
+        assertTrue(userService.login("employer@example.com", "employer123").isPresent());
+        assertTrue(userService.login("employer@techcorp.com", "Employer@123").isPresent());
+
+        // Job Seeker credentials
+        assertTrue(userService.login("seeker@example.com", "seeker123").isPresent());
+        assertTrue(userService.login("priya@example.com", "priya123").isPresent());
+
+        // Invalid credentials
+        assertFalse(userService.login("admin@portal.com", "wrongPass").isPresent());
+        assertFalse(userService.login("nonexistent@example.com", "anyPass").isPresent());
+    }
+
+    @Test
+    @DisplayName("Verify LoginServlet executes complete login lifecycle and redirects to appropriate role dashboards")
+    void testLoginServletEndToEndFlow() throws Exception {
+        ActivityLogger logger = new ActivityLogger(new ActivityLogDAO());
+        LoginAttemptService attemptService = new LoginAttemptService();
+        LoginServlet loginServlet = new LoginServlet(userService, logger, attemptService);
+
+        // 1. Admin Login
+        MockHttpServletRequest adminReq = new MockHttpServletRequest("POST", "/servlet/login");
+        adminReq.setParameter("email", "admin@portal.com");
+        adminReq.setParameter("password", "admin123");
+        adminReq.setRemoteAddr("127.0.0.1");
+        MockHttpServletResponse adminResp = new MockHttpServletResponse();
+
+        loginServlet.service(adminReq, adminResp);
+        assertEquals("/admin/dashboard", adminResp.getRedirectedUrl());
+        assertNotNull(adminReq.getSession(false));
+        assertEquals("ADMIN", adminReq.getSession(false).getAttribute("role"));
+
+        // 2. Employer Login
+        MockHttpServletRequest empReq = new MockHttpServletRequest("POST", "/servlet/login");
+        empReq.setParameter("email", "employer@techcorp.com");
+        empReq.setParameter("password", "employer123");
+        empReq.setRemoteAddr("127.0.0.1");
+        MockHttpServletResponse empResp = new MockHttpServletResponse();
+
+        loginServlet.service(empReq, empResp);
+        assertEquals("/employer/dashboard", empResp.getRedirectedUrl());
+        assertEquals("EMPLOYER", empReq.getSession(false).getAttribute("role"));
+
+        // 3. Seeker Login
+        MockHttpServletRequest seekerReq = new MockHttpServletRequest("POST", "/servlet/login");
+        seekerReq.setParameter("email", "seeker@example.com");
+        seekerReq.setParameter("password", "seeker123");
+        seekerReq.setRemoteAddr("127.0.0.1");
+        MockHttpServletResponse seekerResp = new MockHttpServletResponse();
+
+        loginServlet.service(seekerReq, seekerResp);
+        assertEquals("/jobseeker/dashboard", seekerResp.getRedirectedUrl());
+        assertEquals("JOB_SEEKER", seekerReq.getSession(false).getAttribute("role"));
+
+        // 4. Bad Credentials
+        MockHttpServletRequest badReq = new MockHttpServletRequest("POST", "/servlet/login");
+        badReq.setParameter("email", "seeker@example.com");
+        badReq.setParameter("password", "wrongpass");
+        badReq.setRemoteAddr("127.0.0.1");
+        MockHttpServletResponse badResp = new MockHttpServletResponse();
+
+        loginServlet.service(badReq, badResp);
+        assertEquals("/login?error=invalid_credentials", badResp.getRedirectedUrl());
     }
 }

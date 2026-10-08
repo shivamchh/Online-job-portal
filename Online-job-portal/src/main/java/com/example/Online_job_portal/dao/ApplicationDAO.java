@@ -50,7 +50,7 @@ public class ApplicationDAO implements DAO<Application> {
 
     @Override
     public void save(Application application) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             saveInMemory(application);
             return;
         }
@@ -102,7 +102,7 @@ public class ApplicationDAO implements DAO<Application> {
     }
 
     public boolean hasUserApplied(int jobId, int jobSeekerId) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return applications.stream()
                     .anyMatch(a -> a.getJobId() == jobId && a.getJobSeekerId() == jobSeekerId);
         }
@@ -225,7 +225,7 @@ public class ApplicationDAO implements DAO<Application> {
 
     @Override
     public Optional<Application> findById(int id) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return applications.stream()
                     .filter(application -> application.getId() == id)
                     .findFirst();
@@ -254,7 +254,7 @@ public class ApplicationDAO implements DAO<Application> {
 
     @Override
     public List<Application> findAll() {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return new ArrayList<>(applications);
         }
 
@@ -277,7 +277,7 @@ public class ApplicationDAO implements DAO<Application> {
     }
 
     public List<Application> findByJobSeekerId(int jobSeekerId) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return applications.stream()
                     .filter(application -> application.getJobSeekerId() == jobSeekerId)
                     .toList();

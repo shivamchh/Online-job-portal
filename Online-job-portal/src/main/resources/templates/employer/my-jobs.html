@@ -54,6 +54,11 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">
+                                        <!-- Edit Job Button & Modal Trigger -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" th:data-bs-target="'#editJobModal' + ${job.id}" title="Edit job details">
+                                            <i class="bi bi-pencil-square"></i> Edit
+                                        </button>
+
                                         <form method="post" action="/servlet/jobs" class="d-inline">
                                             <input type="hidden" name="action" value="toggle">
                                             <input type="hidden" name="id" th:value="${job.id}">
@@ -73,6 +78,64 @@
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
+                                    </div>
+
+                                    <!-- Edit Job Modal -->
+                                    <div class="modal fade text-start" th:id="'editJobModal' + ${job.id}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <form method="post" action="/servlet/jobs">
+                                                    <input type="hidden" name="action" value="update">
+                                                    <input type="hidden" name="id" th:value="${job.id}">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title fw-bold">
+                                                            <i class="bi bi-pencil-square text-primary me-2"></i>Edit Job #<span th:text="${job.id}">1</span>
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row g-3">
+                                                            <div class="col-md-8">
+                                                                <label class="form-label small fw-semibold">Job Title</label>
+                                                                <input type="text" name="title" class="form-control" th:value="${job.title}" required>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label class="form-label small fw-semibold">Job Type</label>
+                                                                <select name="jobType" class="form-select">
+                                                                    <option value="Full Time" th:selected="${job.jobType == 'Full Time'}">Full Time</option>
+                                                                    <option value="Part Time" th:selected="${job.jobType == 'Part Time'}">Part Time</option>
+                                                                    <option value="Remote" th:selected="${job.jobType == 'Remote'}">Remote</option>
+                                                                    <option value="Contract" th:selected="${job.jobType == 'Contract'}">Contract</option>
+                                                                    <option value="Internship" th:selected="${job.jobType == 'Internship'}">Internship</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-semibold">Location</label>
+                                                                <input type="text" name="location" class="form-control" th:value="${job.location}" required>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-semibold">Annual Salary ($)</label>
+                                                                <input type="number" step="1000" name="salary" class="form-control" th:value="${job.salary}" required>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <label class="form-label small fw-semibold">Required Skills & Keywords</label>
+                                                                <input type="text" name="requirements" class="form-control" th:value="${job.requirements}" required>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <label class="form-label small fw-semibold">Job Description</label>
+                                                                <textarea name="description" rows="4" class="form-control" th:text="${job.description}" required></textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" class="btn btn-primary">
+                                                            <i class="bi bi-save me-1"></i> Save Changes
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>

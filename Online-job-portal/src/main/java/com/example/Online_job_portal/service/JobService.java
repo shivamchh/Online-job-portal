@@ -28,8 +28,16 @@ public class JobService implements JobOperations {
 
     @Override
     public void updateJob(Job job) {
-        jobDAO.setJobStatus(job.getId(), job.getStatus());
+        if (job != null) {
+            jobDAO.updateJobDetails(job.getId(), job.getTitle(), job.getDescription(), job.getRequirements(), job.getSalary(), job.getLocation(), job.getJobType());
+            jobDAO.setJobStatus(job.getId(), job.getStatus());
+        }
         System.out.println("Job updated successfully.");
+    }
+
+    public void updateJobDetails(int jobId, String title, String description, String requirements, double salary, String location, String jobType) {
+        jobDAO.updateJobDetails(jobId, title, description, requirements, salary, location, jobType);
+        System.out.println("Job #" + jobId + " updated successfully.");
     }
 
     @Override

@@ -62,7 +62,8 @@
                                 </td>
                                 <td class="small text-muted" th:text="${app.appliedDate}">2026-10-01</td>
                                 <td>
-                                    <form method="post" action="/employer/applications/update-status" class="d-flex align-items-center gap-2">
+                                    <form method="post" action="/servlet/applications" class="d-flex align-items-center gap-2">
+                                        <input type="hidden" name="action" value="updateStatus">
                                         <input type="hidden" name="applicationId" th:value="${app.id}">
                                         <select name="status" class="form-select form-select-sm" style="width: 140px;">
                                             <option value="SUBMITTED" th:selected="${app.status == 'SUBMITTED'}">SUBMITTED</option>

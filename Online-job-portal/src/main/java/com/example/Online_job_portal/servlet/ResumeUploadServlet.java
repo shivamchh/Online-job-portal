@@ -76,11 +76,13 @@ public class ResumeUploadServlet extends HttpServlet {
             return;
         }
 
+        String coverLetter = req.getParameter("coverLetter");
+
         if (filePart == null || filePart.getSize() <= 0) {
             // Check if fallback resume link/path was provided
             String fallbackPath = req.getParameter("resumePath");
             if (fallbackPath != null && !fallbackPath.isBlank()) {
-                submitApplication(jobId, jobSeekerId, fallbackPath.trim(), userName, req, resp);
+                submitApplication(jobId, jobSeekerId, fallbackPath.trim(), userName, coverLetter, req, resp);
                 return;
             }
 
@@ -112,14 +114,14 @@ public class ResumeUploadServlet extends HttpServlet {
         File destFile = new File(dir, safeFilename);
         filePart.write(destFile.getAbsolutePath());
 
-        submitApplication(jobId, jobSeekerId, safeFilename, userName, req, resp);
+        submitApplication(jobId, jobSeekerId, safeFilename, userName, coverLetter, req, resp);
     }
 
-    private void submitApplication(int jobId, int jobSeekerId, String resumePath, String userName,
+    private void submitApplication(int jobId, int jobSeekerId, String resumePath, String userName, String coverLetter,
                                    HttpServletRequest req, HttpServletResponse resp) throws IOException {
         try {
             if (applicationService != null) {
-                applicationService.applyForJob(jobId, jobSeekerId, resumePath, userName);
+                applicationService.applyForJob(jobId, jobSeekerId, resumePath, userName, coverLetter);
             }
             resp.sendRedirect(req.getContextPath() + "/jobseeker/applications?success=" + encode("Application submitted successfully with your resume!"));
         } catch (ApplicationException e) {

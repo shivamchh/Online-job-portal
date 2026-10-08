@@ -46,10 +46,22 @@ public class AuthController {
         return "login";
     }
 
+    @PostMapping("/login")
+    public void postLogin(jakarta.servlet.http.HttpServletRequest req, jakarta.servlet.http.HttpServletResponse resp)
+            throws jakarta.servlet.ServletException, java.io.IOException {
+        req.getRequestDispatcher("/servlet/login").forward(req, resp);
+    }
+
     @GetMapping("/register")
     public String register(@RequestParam(required = false) String error, Model model) {
         model.addAttribute("error", error);
         return "register";
+    }
+
+    @PostMapping("/register")
+    public void postRegister(jakarta.servlet.http.HttpServletRequest req, jakarta.servlet.http.HttpServletResponse resp)
+            throws jakarta.servlet.ServletException, java.io.IOException {
+        req.getRequestDispatcher("/servlet/register").forward(req, resp);
     }
 
     @GetMapping("/access-denied")
