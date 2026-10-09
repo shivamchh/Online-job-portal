@@ -6,10 +6,7 @@ import com.example.Online_job_portal.service.*;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -234,7 +231,26 @@ public class JobSeekerController {
         return "jobseeker/recommendations";
     }
 
+    @ModelAttribute
+    public void addGlobalSeekerNotificationAttributes(HttpSession session, Model model) {
+        if (session != null) {
+            int seekerId = getSessionUserId(session);
+            if (seekerId > 0 && notificationDAO != null) {
+                int unread = notificationDAO.getUnreadCount(seekerId);
+                model.addAttribute("unreadCount", unread);
+                List<Notification> notifs = notificationDAO.findByUserId(seekerId);
+                model.addAttribute("navNotifications", notifs.stream().limit(5).toList());
+            }
+        }
+    }
+
+    @GetMapping("/notifications")
+    public String viewNotifications() {
+        return "redirect:/jobseeker/dashboard";
+    }
+
     private int getSessionUserId(HttpSession session) {
+        if (session == null) return 0;
         Object userId = session.getAttribute("userId");
         return userId instanceof Integer ? (Integer) userId : 0;
     }

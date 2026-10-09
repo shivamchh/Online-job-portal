@@ -2,6 +2,8 @@ package com.example.Online_job_portal.dao;
 
 import com.example.Online_job_portal.config.DBConnection;
 import com.example.Online_job_portal.model.Job;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.sql.*;
@@ -14,11 +16,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Repository
 public class JobDAO implements DAO<Job> {
 
+    private static final Logger log = LoggerFactory.getLogger(JobDAO.class);
+
     private final List<Job> jobs = new ArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger(10);
     private boolean useMemoryStore;
 
     public JobDAO() {
+    }
+
+    private static boolean isStrictDbMode() {
+        return "true".equalsIgnoreCase(System.getenv("STRICT_DB_MODE"))
+                || "true".equalsIgnoreCase(System.getProperty("STRICT_DB_MODE"));
+    }
+
+    private void handleSqlException(String operation, SQLException e) {
+        log.error("Database SQL failure during [{}] in JobDAO: {}", operation, e.getMessage(), e);
+        if (isStrictDbMode()) {
+            throw new RuntimeException("Database operation [" + operation + "] failed in JobDAO", e);
+        }
+        useMemoryStore = true;
     }
 
     public synchronized void seedInitialJobs() {
@@ -76,7 +93,7 @@ public class JobDAO implements DAO<Job> {
                 }
             }
         } catch (SQLException e) {
-            useMemoryStore = true;
+            handleSqlException("save", e);
             saveInMemory(job);
         }
     }
@@ -112,7 +129,7 @@ public class JobDAO implements DAO<Job> {
                 }
             }
         } catch (SQLException e) {
-            useMemoryStore = true;
+            handleSqlException("findById", e);
             return jobs.stream()
                     .filter(job -> job.getId() == id)
                     .findFirst();

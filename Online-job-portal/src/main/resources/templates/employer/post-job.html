@@ -23,6 +23,7 @@
                 <div class="col-lg-8">
                     <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
                         <form id="postJobForm" method="post" action="/servlet/jobs" class="needs-validation" novalidate>
+                            <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Job Title</label>
                                 <input type="text" name="title" class="form-control" placeholder="e.g. Senior Java Software Engineer" required minlength="3">

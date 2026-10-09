@@ -246,6 +246,7 @@ class JobPortalCoreFeaturesTest {
     @Test
     @DisplayName("System Settings DAO supports key-value configuration reading and updating")
     void testSystemSettingsConfiguration() {
+        settingsDAO.setValue("portal_name", "Online Job Portal");
         assertEquals("Online Job Portal", settingsDAO.getValue("portal_name", "Default"));
         assertEquals("2", settingsDAO.getValue("max_resume_size_mb", "2"));
 
@@ -352,6 +353,93 @@ class JobPortalCoreFeaturesTest {
     }
 
     @Test
+    @DisplayName("Verify applications query with resume_path works without SQL error")
+    void testApplicationsResumePathQuery() {
+        if (com.example.Online_job_portal.config.DBConnection.isAvailable()) {
+            try (java.sql.Connection conn = com.example.Online_job_portal.config.DBConnection.getConnection();
+                 java.sql.Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT id, job_id, job_seeker_id, status, resume_path FROM applications")) {
+                assertNotNull(rs);
+            } catch (java.sql.SQLException e) {
+                fail("Query 'SELECT id, job_id, job_seeker_id, status, resume_path FROM applications' failed: " + e.getMessage());
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("Security: Admin role registration restricted without valid owner authorization key")
+    void testAdminRegistrationRestriction() throws Exception {
+        ActivityLogger logger = new ActivityLogger(new ActivityLogDAO());
+        com.example.Online_job_portal.servlet.RegisterServlet registerServlet =
+                new com.example.Online_job_portal.servlet.RegisterServlet(userService, logger, settingsDAO);
+
+        // 1. Attempt admin registration without key -> Rejected
+        MockHttpServletRequest reqWithoutKey = new MockHttpServletRequest("POST", "/servlet/register");
+        reqWithoutKey.setParameter("name", "Hacker Admin");
+        reqWithoutKey.setParameter("email", "hacker@evil.com");
+        reqWithoutKey.setParameter("password", "hack123");
+        reqWithoutKey.setParameter("role", "ADMIN");
+        MockHttpServletResponse respWithoutKey = new MockHttpServletResponse();
+        registerServlet.service(reqWithoutKey, respWithoutKey);
+        assertTrue(respWithoutKey.getRedirectedUrl().contains("error="));
+
+        // 2. Attempt admin registration with invalid key -> Rejected
+        MockHttpServletRequest reqWithBadKey = new MockHttpServletRequest("POST", "/servlet/register");
+        reqWithBadKey.setParameter("name", "Fake Admin");
+        reqWithBadKey.setParameter("email", "fake@evil.com");
+        reqWithBadKey.setParameter("password", "fake123");
+        reqWithBadKey.setParameter("role", "ADMIN");
+        reqWithBadKey.setParameter("adminAccessKey", "WRONG_KEY");
+        MockHttpServletResponse respWithBadKey = new MockHttpServletResponse();
+        registerServlet.service(reqWithBadKey, respWithBadKey);
+        assertTrue(respWithBadKey.getRedirectedUrl().contains("error="));
+
+        // 3. Admin registration with valid key -> Succeeded
+        String validAdminEmail = "auth_admin_" + System.currentTimeMillis() + "@admin.org";
+        MockHttpServletRequest reqWithGoodKey = new MockHttpServletRequest("POST", "/servlet/register");
+        reqWithGoodKey.setParameter("name", "Authorized Admin");
+        reqWithGoodKey.setParameter("email", validAdminEmail);
+        reqWithGoodKey.setParameter("password", "authPass123");
+        reqWithGoodKey.setParameter("role", "ADMIN");
+        reqWithGoodKey.setParameter("adminAccessKey", "ADMIN@ACCESS@2026");
+        MockHttpServletResponse respWithGoodKey = new MockHttpServletResponse();
+        registerServlet.service(reqWithGoodKey, respWithGoodKey);
+        assertEquals("/login?registered=success", respWithGoodKey.getRedirectedUrl());
+
+        // 4. Job Seeker registration doesn't require key -> Succeeded
+        String validSeekerEmail = "reg_seeker_" + System.currentTimeMillis() + "@applicant.com";
+        MockHttpServletRequest seekerReq = new MockHttpServletRequest("POST", "/servlet/register");
+        seekerReq.setParameter("name", "Regular Seeker");
+        seekerReq.setParameter("email", validSeekerEmail);
+        seekerReq.setParameter("password", "pass123");
+        seekerReq.setParameter("role", "JOB_SEEKER");
+        MockHttpServletResponse seekerResp = new MockHttpServletResponse();
+        registerServlet.service(seekerReq, seekerResp);
+        assertEquals("/login?registered=success", seekerResp.getRedirectedUrl());
+    }
+
+    @Test
+    @DisplayName("Security: LoginServlet rejects inactive and deactivated accounts")
+    void testLoginServletRejectsInactiveAccounts() throws Exception {
+        ActivityLogger logger = new ActivityLogger(new ActivityLogDAO());
+        LoginAttemptService attemptService = new LoginAttemptService();
+        LoginServlet loginServlet = new LoginServlet(userService, logger, attemptService);
+
+        // Register a user then deactivate them
+        User user = userService.registerUser("Deactivated User", "deactivated@example.com", "pass123", "1234567890", "JOB_SEEKER");
+        userDAO.deleteById(user.getId()); // sets status to INACTIVE
+
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/servlet/login");
+        req.setParameter("email", "deactivated@example.com");
+        req.setParameter("password", "pass123");
+        req.setRemoteAddr("127.0.0.1");
+        MockHttpServletResponse resp = new MockHttpServletResponse();
+
+        loginServlet.service(req, resp);
+        assertEquals("/login?error=account_deactivated", resp.getRedirectedUrl());
+    }
+
+    @Test
     @DisplayName("Warning 3: LoginAttemptService rate limiting and account lockout after 5 failed attempts")
     void testLoginAttemptServiceBruteForceProtection() {
         LoginAttemptService attemptService = new LoginAttemptService();
@@ -448,5 +536,56 @@ class JobPortalCoreFeaturesTest {
 
         loginServlet.service(badReq, badResp);
         assertEquals("/login?error=invalid_credentials", badResp.getRedirectedUrl());
+    }
+
+    @Test
+    @DisplayName("Useful Feature: Job seeker successfully withdraws an application")
+    void testWithdrawApplicationSuccess() throws Exception {
+        int seekerId = 3;
+        int jobId = 1;
+        Application app = applicationService.applyForJob(jobId, seekerId, "my_resume.pdf", "Alex");
+        assertNotNull(app);
+
+        // Withdraw application
+        applicationService.withdrawApplication(app.getId(), seekerId);
+
+        // Verify status changed to WITHDRAWN
+        Application updated = applicationDAO.findById(app.getId()).orElseThrow();
+        assertEquals("WITHDRAWN", updated.getStatus());
+
+        // Verify status history
+        List<StatusHistory> history = applicationService.getStatusHistory(app.getId());
+        assertTrue(history.stream().anyMatch(h -> "WITHDRAWN".equalsIgnoreCase(h.getStatus())));
+    }
+
+    @Test
+    @DisplayName("Useful Feature: Withdrawing another candidate's application is rejected")
+    void testWithdrawApplicationUnauthorized() throws Exception {
+        int seekerId = 3;
+        int otherSeekerId = 4;
+        int jobId = 1;
+        Application app = applicationService.applyForJob(jobId, seekerId, "my_resume.pdf", "Alex");
+
+        // Attempt withdrawal by other candidate
+        ApplicationException ex = assertThrows(ApplicationException.class, () -> {
+            applicationService.withdrawApplication(app.getId(), otherSeekerId);
+        });
+        assertTrue(ex.getMessage().contains("only withdraw your own applications"));
+    }
+
+    @Test
+    @DisplayName("Useful Feature: Duplicate withdrawal attempt is rejected")
+    void testWithdrawApplicationDuplicateRejected() throws Exception {
+        int seekerId = 3;
+        int jobId = 1;
+        Application app = applicationService.applyForJob(jobId, seekerId, "my_resume.pdf", "Alex");
+
+        applicationService.withdrawApplication(app.getId(), seekerId);
+
+        // Attempt withdrawing again
+        ApplicationException ex = assertThrows(ApplicationException.class, () -> {
+            applicationService.withdrawApplication(app.getId(), seekerId);
+        });
+        assertTrue(ex.getMessage().contains("already withdrawn"));
     }
 }

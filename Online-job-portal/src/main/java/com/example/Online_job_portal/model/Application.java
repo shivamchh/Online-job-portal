@@ -94,4 +94,25 @@ public class Application {
     public void setNotes(String notes) {
         this.notes = notes;
     }
+
+    public com.example.Online_job_portal.model.enums.ApplicationStatus getStatusEnum() {
+        return com.example.Online_job_portal.model.enums.ApplicationStatus.fromString(this.status);
+    }
+
+    public void setStatusEnum(com.example.Online_job_portal.model.enums.ApplicationStatus applicationStatus) {
+        this.status = applicationStatus != null ? applicationStatus.getCode() : com.example.Online_job_portal.model.enums.ApplicationStatus.SUBMITTED.getCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Application that = (Application) o;
+        return id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(id);
+    }
 }

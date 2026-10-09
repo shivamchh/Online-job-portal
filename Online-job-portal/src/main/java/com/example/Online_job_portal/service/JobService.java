@@ -6,6 +6,7 @@ import com.example.Online_job_portal.model.Job;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class JobService implements JobOperations {
@@ -75,6 +76,10 @@ public class JobService implements JobOperations {
 
     public void setJobStatus(int jobId, String status) {
         jobDAO.setJobStatus(jobId, status);
+    }
+
+    public Optional<Job> getJobById(int jobId) {
+        return jobDAO.findById(jobId);
     }
 
     public Job findJobById(int jobId) throws JobNotFoundException {

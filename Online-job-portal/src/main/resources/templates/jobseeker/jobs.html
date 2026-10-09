@@ -146,6 +146,7 @@
                                 </div>
                                 <form method="post" action="/servlet/resume-upload" enctype="multipart/form-data" class="resume-upload-form">
                                     <div class="modal-body">
+                                        <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                                         <input type="hidden" name="jobId" th:value="${job.id}">
                                         
                                         <div class="mb-3">

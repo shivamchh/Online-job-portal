@@ -80,6 +80,7 @@
                         <!-- Message Input Form (Servlet Submission) -->
                         <div class="p-3 border-top bg-white" th:if="${selectedUser != null}">
                             <form method="post" action="/servlet/messages" class="d-flex gap-2">
+                                <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                                 <input type="hidden" name="receiverId" th:value="${selectedUser.id}">
                                 <input type="hidden" name="returnUrl" th:value="'/jobseeker/messages?withUser=' + ${selectedUser.id}">
                                 <textarea name="content" rows="2" class="form-control" placeholder="Reply to employer..." required></textarea>

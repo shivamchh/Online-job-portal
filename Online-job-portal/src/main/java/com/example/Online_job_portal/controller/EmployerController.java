@@ -54,6 +54,7 @@ public class EmployerController {
     public String dashboard(@RequestParam(required = false) String success,
                             @RequestParam(required = false) String error,
                             Model model, HttpSession session) {
+        if (!isAuthorized(session)) return redirectToAuth(session);
         int employerId = getSessionUserId(session);
         List<Job> myJobs = jobService.getJobsByEmployer(employerId);
         List<Application> myApplications = applicationService.getApplicationsByEmployer(employerId, jobService);
@@ -89,6 +90,7 @@ public class EmployerController {
     public String postJob(@RequestParam(required = false) String error,
                           @RequestParam(required = false) String success,
                           Model model, HttpSession session) {
+        if (!isAuthorized(session)) return redirectToAuth(session);
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("role", session.getAttribute("role"));
         model.addAttribute("error", error);
@@ -100,6 +102,7 @@ public class EmployerController {
     public String myJobs(@RequestParam(required = false) String success,
                          @RequestParam(required = false) String error,
                          Model model, HttpSession session) {
+        if (!isAuthorized(session)) return redirectToAuth(session);
         int employerId = getSessionUserId(session);
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("role", session.getAttribute("role"));
@@ -113,6 +116,7 @@ public class EmployerController {
     public String applications(@RequestParam(required = false) String success,
                                @RequestParam(required = false) String error,
                                Model model, HttpSession session) {
+        if (!isAuthorized(session)) return redirectToAuth(session);
         int employerId = getSessionUserId(session);
         List<Application> apps = applicationService.getApplicationsByEmployer(employerId, jobService);
 
@@ -124,18 +128,30 @@ public class EmployerController {
         return "employer/applications";
     }
 
-    @PostMapping("/applications/update-status")
-    public String updateApplicationStatus(@RequestParam int applicationId,
-                                          @RequestParam String status,
-                                          @RequestParam(required = false) String notes,
-                                          HttpSession session) {
-        String reviewerName = (String) session.getAttribute("userName");
-        try {
-            applicationService.updateApplicationStatus(applicationId, status, notes, reviewerName);
-            return "redirect:/employer/applications?success=" + encode("Application #" + applicationId + " updated to " + status);
-        } catch (Exception e) {
-            return "redirect:/employer/applications?error=" + encode(e.getMessage());
+    @GetMapping("/applications/export-csv")
+    public void exportApplicantsCsv(HttpSession session, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        if (!isAuthorized(session)) {
+            response.sendError(403, "Unauthorized");
+            return;
         }
+        int employerId = getSessionUserId(session);
+        List<Application> apps = applicationService.getApplicationsByEmployer(employerId, jobService);
+
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=\"candidate_applications.csv\"");
+        java.io.PrintWriter writer = response.getWriter();
+        writer.println("Application ID,Job ID,Candidate ID,Status,Applied Date,Notes,Resume File");
+        for (Application a : apps) {
+            writer.printf("%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\"%n",
+                    a.getId(),
+                    a.getJobId(),
+                    a.getJobSeekerId(),
+                    a.getStatus(),
+                    a.getAppliedDate() != null ? a.getAppliedDate().toString() : "",
+                    a.getNotes() != null ? a.getNotes().replace("\"", "\"\"") : "",
+                    a.getResumePath() != null ? a.getResumePath() : "");
+        }
+        writer.flush();
     }
 
     @GetMapping("/messages")
@@ -143,6 +159,7 @@ public class EmployerController {
                            @RequestParam(required = false) String success,
                            @RequestParam(required = false) String error,
                            Model model, HttpSession session) {
+        if (!isAuthorized(session)) return redirectToAuth(session);
         int employerId = getSessionUserId(session);
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("role", session.getAttribute("role"));
@@ -180,9 +197,25 @@ public class EmployerController {
 
     @GetMapping("/statistics")
     public String statistics(Model model, HttpSession session) {
+        if (!isAuthorized(session)) return redirectToAuth(session);
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("role", session.getAttribute("role"));
         return "employer/statistics";
+    }
+
+    private boolean isAuthorized(HttpSession session) {
+        if (session == null || session.getAttribute("userId") == null) {
+            return false;
+        }
+        String role = (String) session.getAttribute("role");
+        return "EMPLOYER".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role);
+    }
+
+    private String redirectToAuth(HttpSession session) {
+        if (session == null || session.getAttribute("userId") == null) {
+            return "redirect:/login?error=auth_required";
+        }
+        return "redirect:/access-denied";
     }
 
     private int getSessionUserId(HttpSession session) {

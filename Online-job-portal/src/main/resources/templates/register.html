@@ -26,6 +26,7 @@
                     </div>
 
                     <form id="registerForm" method="post" action="/servlet/register" class="needs-validation" novalidate>
+                        <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Full Name</label>
                             <div class="input-group">
@@ -63,15 +64,29 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label class="form-label small fw-semibold">Account Role</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-briefcase"></i></span>
-                                <select name="role" class="form-select" required>
-                                    <option value="JOB_SEEKER" selected>Job Seeker (Browse & Apply)</option>
-                                    <option value="EMPLOYER">Employer (Post Jobs & Hire)</option>
-                                    <option value="ADMIN">System Administrator</option>
+                                <select id="roleSelect" name="role" class="form-select" required onchange="toggleAdminKeyField()">
+                                    <option value="JOB_SEEKER" selected>Job Seeker (Browse & Apply for Jobs)</option>
+                                    <option value="EMPLOYER">Employer (Post Jobs & Manage Candidates)</option>
+                                    <option value="ADMIN">System Administrator (Restricted - Requires Owner Key)</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Admin Access Key Field: Required only for Administrator accounts -->
+                        <div id="adminKeyGroup" class="mb-3" style="display: none;">
+                            <label class="form-label small fw-semibold text-danger">
+                                <i class="bi bi-shield-lock-fill me-1"></i> Owner Authorization Key <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-danger-subtle text-danger"><i class="bi bi-key-fill"></i></span>
+                                <input type="password" id="adminKeyInput" name="adminAccessKey" class="form-control" placeholder="Enter Owner Authorization Key">
+                            </div>
+                            <div class="form-text small text-danger">
+                                Administrator registration is strictly restricted. You must have explicit access from the portal owner.
                             </div>
                         </div>
 
@@ -92,6 +107,20 @@
 
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 <script>
+    function toggleAdminKeyField() {
+        var roleEl = document.getElementById('roleSelect');
+        var groupEl = document.getElementById('adminKeyGroup');
+        var inputEl = document.getElementById('adminKeyInput');
+        if (roleEl.value === 'ADMIN') {
+            groupEl.style.display = 'block';
+            inputEl.setAttribute('required', 'required');
+        } else {
+            groupEl.style.display = 'none';
+            inputEl.removeAttribute('required');
+            inputEl.value = '';
+        }
+    }
+
     (function () {
         'use strict';
         var form = document.getElementById('registerForm');

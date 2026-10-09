@@ -77,15 +77,25 @@ public class LoginServlet extends HttpServlet {
         }
 
         // 2. Authenticate credentials
-        Optional<User> loggedInUser = userService != null ? userService.login(email, password) : Optional.empty();
+        Optional<User> authenticatedUser = userService != null ? userService.authenticate(email, password) : Optional.empty();
 
-        if (loggedInUser.isPresent()) {
+        if (authenticatedUser.isPresent()) {
+            User user = authenticatedUser.get();
+
+            // Check account status: enforce active approval status
+            if (!user.isActive()) {
+                if ("PENDING".equalsIgnoreCase(user.getStatus())) {
+                    resp.sendRedirect(req.getContextPath() + "/login?error=account_pending");
+                } else {
+                    resp.sendRedirect(req.getContextPath() + "/login?error=account_deactivated");
+                }
+                return;
+            }
+
             // Successful authentication clears any prior failed attempts
             if (loginAttemptService != null) {
                 loginAttemptService.loginSucceeded(rateLimitKey);
             }
-
-            User user = loggedInUser.get();
             String role = userService.getRole(user);
 
             // Establish secure session (change session ID to prevent session fixation attacks)

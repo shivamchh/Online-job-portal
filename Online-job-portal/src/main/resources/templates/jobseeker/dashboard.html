@@ -126,11 +126,21 @@
                                     <strong><span class="badge bg-secondary font-monospace" th:text="'Job #' + ${app.jobId}">Job #1</span></strong>
                                 </td>
                                 <td>
-                                    <span th:if="${app.status == 'SUBMITTED'}" class="badge badge-status badge-submitted">SUBMITTED</span>
-                                    <span th:if="${app.status == 'PENDING'}" class="badge badge-status badge-pending">PENDING</span>
-                                    <span th:if="${app.status == 'SHORTLISTED'}" class="badge badge-status badge-shortlisted">SHORTLISTED</span>
-                                    <span th:if="${app.status == 'APPROVED'}" class="badge badge-status badge-approved">APPROVED</span>
-                                    <span th:if="${app.status == 'REJECTED'}" class="badge badge-status badge-rejected">REJECTED</span>
+                                    <span th:if="${app.status == 'APPROVED'}" class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                        🎉 SELECTED & APPROVED
+                                    </span>
+                                    <span th:if="${app.status == 'SHORTLISTED'}" class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                                        ⭐ SHORTLISTED
+                                    </span>
+                                    <span th:if="${app.status == 'REJECTED'}" class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                        ❌ NOT SELECTED / REJECTED
+                                    </span>
+                                    <span th:if="${app.status == 'SUBMITTED'}" class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                        ⏳ SUBMITTED
+                                    </span>
+                                    <span th:if="${app.status == 'PENDING'}" class="badge bg-warning-subtle text-warning border px-2 py-1">
+                                        ⏳ UNDER REVIEW
+                                    </span>
                                 </td>
                                 <td class="small text-muted" th:text="${app.appliedDate}">2026-10-01</td>
                                 <td>
@@ -248,23 +258,35 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
                         <i class="bi bi-bell text-warning"></i> Recent Notifications
+                        <span th:if="${unreadCount > 0}" class="badge bg-danger rounded-pill" th:text="${unreadCount}">1</span>
                     </h5>
                     <form th:if="${unreadCount > 0}" method="post" action="/servlet/notifications" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-link text-decoration-none p-0 text-muted small">
-                            Mark all as read
+                        <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
+                        <button type="submit" class="btn btn-sm btn-outline-primary py-1 px-2 small">
+                            <i class="bi bi-check-all me-1"></i> Mark all as read
                         </button>
                     </form>
                 </div>
                 <div class="list-group list-group-flush">
-                    <div th:each="n : ${notifications}" class="list-group-item p-3" th:classappend="${!n.read ? 'bg-light' : ''}">
+                    <div th:each="n : ${notifications}" class="list-group-item p-3" th:classappend="${!n.read ? 'bg-warning-subtle rounded-3 mb-2 border' : 'mb-1'}">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <strong class="small" th:text="${n.title}">Notification Title</strong>
-                            <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.65rem;" th:if="${!n.read}">NEW</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-warning text-dark font-monospace" style="font-size: 0.65rem;" th:if="${!n.read}">NEW</span>
+                                <form th:if="${!n.read}" method="post" action="/servlet/notifications" class="d-inline m-0 p-0">
+                                    <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
+                                    <input type="hidden" name="id" th:value="${n.id}">
+                                    <button type="submit" class="btn btn-sm btn-link text-decoration-none py-0 px-1 text-muted" title="Mark as read" style="font-size: 0.75rem;">
+                                        <i class="bi bi-check2"></i> Mark Read
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                         <p class="small text-muted mb-1" th:text="${n.message}">Notification message</p>
                         <small class="text-secondary" th:text="${#temporals.format(n.createdAt, 'MMM dd, HH:mm')}">Oct 08</small>
                     </div>
                     <div th:if="${notifications.empty}" class="p-3 text-center text-muted small">
+                        <i class="bi bi-bell-slash text-secondary d-block mb-1" style="font-size: 1.5rem;"></i>
                         No notifications at this time.
                     </div>
                 </div>

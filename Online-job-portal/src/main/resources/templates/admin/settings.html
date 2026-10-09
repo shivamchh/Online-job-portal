@@ -32,6 +32,7 @@
                         </div>
 
                         <form method="post" action="/servlet/settings" class="needs-validation" novalidate id="settingsForm">
+                            <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold small">Portal Display Name</label>
                                 <input type="text" name="portal_name" class="form-control" 
@@ -56,6 +57,25 @@
                                         <option value="false" th:selected="${settings != null and settings['registration_open'] == 'false'}">Disabled (Invite Only)</option>
                                     </select>
                                     <div class="form-text small">Controls whether new seekers can register.</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-danger">
+                                        <i class="bi bi-shield-lock-fill me-1"></i> Owner Admin Access Key
+                                    </label>
+                                    <input type="text" name="admin_access_key" class="form-control font-monospace"
+                                           th:value="${settings != null ? settings['admin_access_key'] : 'ADMIN@ACCESS@2026'}" required>
+                                    <div class="form-text small">Secret authorization key required to register an Admin account. Share only with authorized staff.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">Account Approval Policy</label>
+                                    <select name="require_account_approval" class="form-select">
+                                        <option value="false" th:selected="${settings != null and settings['require_account_approval'] == 'false'}">Immediate Access (Active upon registration)</option>
+                                        <option value="true" th:selected="${settings != null and settings['require_account_approval'] == 'true'}">Approval Required (Pending until Admin activates)</option>
+                                    </select>
+                                    <div class="form-text small">When enabled, newly registered users cannot login until an Admin approves them.</div>
                                 </div>
                             </div>
 

@@ -14,6 +14,10 @@ public class Notification {
     public Notification() {
     }
 
+    public Notification(int userId, String title, String message, boolean read) {
+        this(0, userId, title, message, read, LocalDateTime.now());
+    }
+
     public Notification(int id, int userId, String title, String message, boolean read, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;

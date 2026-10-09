@@ -19,6 +19,8 @@ public class SettingsDAO {
         memoryStore.put("portal_name", new Setting("portal_name", "Online Job Portal", "Display title of the portal"));
         memoryStore.put("max_resume_size_mb", new Setting("max_resume_size_mb", "2", "Maximum allowable resume size in Megabytes"));
         memoryStore.put("registration_open", new Setting("registration_open", "true", "Whether new candidate registration is enabled"));
+        memoryStore.put("admin_access_key", new Setting("admin_access_key", "ADMIN@ACCESS@2026", "Owner authorization key required to register an Admin account"));
+        memoryStore.put("require_account_approval", new Setting("require_account_approval", "false", "Whether new accounts require owner approval before login"));
         memoryStore.put("maintenance_mode", new Setting("maintenance_mode", "false", "Portal maintenance lock"));
         memoryStore.put("contact_email", new Setting("contact_email", "support@jobportal.com", "System administrator contact email"));
     }

@@ -36,13 +36,19 @@ public class ResumeUploadServlet extends HttpServlet {
     @Autowired
     private ApplicationService applicationService;
 
+    @Autowired
+    private com.example.Online_job_portal.service.UserService userService;
+
     @Override
     public void init() throws ServletException {
         super.init();
-        if (applicationService == null) {
-            var ctx = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
-            if (ctx != null) {
+        var ctx = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
+        if (ctx != null) {
+            if (applicationService == null) {
                 applicationService = ctx.getBean(ApplicationService.class);
+            }
+            if (userService == null) {
+                userService = ctx.getBean(com.example.Online_job_portal.service.UserService.class);
             }
         }
     }
@@ -79,14 +85,16 @@ public class ResumeUploadServlet extends HttpServlet {
         String coverLetter = req.getParameter("coverLetter");
 
         if (filePart == null || filePart.getSize() <= 0) {
-            // Check if fallback resume link/path was provided
-            String fallbackPath = req.getParameter("resumePath");
-            if (fallbackPath != null && !fallbackPath.isBlank()) {
-                submitApplication(jobId, jobSeekerId, fallbackPath.trim(), userName, coverLetter, req, resp);
-                return;
+            // Only allow using the seeker's pre-verified profile resume (no arbitrary user input)
+            if (userService != null) {
+                var seekerOpt = userService.findUserById(jobSeekerId);
+                if (seekerOpt.isPresent() && ValidationUtil.isNotBlank(seekerOpt.get().getDefaultResumePath())) {
+                    submitApplication(jobId, jobSeekerId, seekerOpt.get().getDefaultResumePath(), userName, coverLetter, req, resp);
+                    return;
+                }
             }
 
-            resp.sendRedirect(req.getContextPath() + "/jobseeker/jobs?error=" + encode("Please select a resume file (PDF or DOCX)"));
+            resp.sendRedirect(req.getContextPath() + "/jobseeker/jobs?error=" + encode("Please select a verified resume file (PDF or DOCX)"));
             return;
         }
 
@@ -103,7 +111,23 @@ public class ResumeUploadServlet extends HttpServlet {
             return;
         }
 
-        // Store file safely on disk
+        // Validate MIME type
+        if (!ValidationUtil.isValidResumeMimeType(filePart.getContentType())) {
+            resp.sendRedirect(req.getContextPath() + "/jobseeker/jobs?error=" + encode("Invalid file MIME type. Only PDF and DOCX files are allowed."));
+            return;
+        }
+
+        // Validate file signature / magic bytes to prevent spoofed extensions
+        byte[] header = new byte[8];
+        try (java.io.InputStream is = filePart.getInputStream()) {
+            int read = is.read(header);
+            if (read < 4 || !ValidationUtil.isValidFileSignature(header, submittedFilename)) {
+                resp.sendRedirect(req.getContextPath() + "/jobseeker/jobs?error=" + encode("Security check failed: File header does not match a valid PDF or DOCX format."));
+                return;
+            }
+        }
+
+        // Store file safely outside webapp public paths
         String uploadDir = System.getProperty("user.dir") + File.separator + "uploads" + File.separator + "resumes";
         File dir = new File(uploadDir);
         if (!dir.exists()) {

@@ -55,6 +55,8 @@ public class SettingsServlet extends HttpServlet {
         String portalName = req.getParameter("portal_name");
         String maxResumeSize = req.getParameter("max_resume_size_mb");
         String registrationOpen = req.getParameter("registration_open");
+        String adminAccessKey = req.getParameter("admin_access_key");
+        String requireApproval = req.getParameter("require_account_approval");
         String maintenanceMode = req.getParameter("maintenance_mode");
         String contactEmail = req.getParameter("contact_email");
 
@@ -67,6 +69,12 @@ public class SettingsServlet extends HttpServlet {
             }
             if (registrationOpen != null) {
                 adminService.updateSetting("registration_open", registrationOpen.trim());
+            }
+            if (adminAccessKey != null && !adminAccessKey.isBlank()) {
+                adminService.updateSetting("admin_access_key", adminAccessKey.trim());
+            }
+            if (requireApproval != null) {
+                adminService.updateSetting("require_account_approval", requireApproval.trim());
             }
             if (maintenanceMode != null) {
                 adminService.updateSetting("maintenance_mode", maintenanceMode.trim());

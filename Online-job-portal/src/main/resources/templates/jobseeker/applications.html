@@ -46,11 +46,24 @@
                                 </td>
                                 <td class="small text-muted" th:text="${app.appliedDate}">2026-10-01</td>
                                 <td>
-                                    <span th:if="${app.status == 'SUBMITTED'}" class="badge badge-status badge-submitted">SUBMITTED</span>
-                                    <span th:if="${app.status == 'PENDING'}" class="badge badge-status badge-pending">PENDING</span>
-                                    <span th:if="${app.status == 'SHORTLISTED'}" class="badge badge-status badge-shortlisted">SHORTLISTED</span>
-                                    <span th:if="${app.status == 'APPROVED'}" class="badge badge-status badge-approved">APPROVED</span>
-                                    <span th:if="${app.status == 'REJECTED'}" class="badge badge-status badge-rejected">REJECTED</span>
+                                    <span th:if="${app.status == 'APPROVED'}" class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                        🎉 SELECTED & APPROVED
+                                    </span>
+                                    <span th:if="${app.status == 'SHORTLISTED'}" class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                                        ⭐ SHORTLISTED
+                                    </span>
+                                    <span th:if="${app.status == 'REJECTED'}" class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                        ❌ NOT SELECTED / REJECTED
+                                    </span>
+                                    <span th:if="${app.status == 'SUBMITTED'}" class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                        ⏳ SUBMITTED
+                                    </span>
+                                    <span th:if="${app.status == 'PENDING'}" class="badge bg-warning-subtle text-warning border px-2 py-1">
+                                        ⏳ UNDER REVIEW
+                                    </span>
+                                    <span th:if="${app.status == 'WITHDRAWN'}" class="badge bg-dark-subtle text-dark border px-2 py-1">
+                                        🚫 WITHDRAWN
+                                    </span>
                                 </td>
                                 <td>
                                     <a th:if="${app.resumePath != null and !app.resumePath.isEmpty()}" 
@@ -67,6 +80,19 @@
                                             aria-expanded="false">
                                         <i class="bi bi-clock-history me-1"></i> View Timeline (<span th:text="${timelineMap.get(app.id) != null ? timelineMap.get(app.id).size() : 1}">1</span> steps)
                                     </button>
+
+                                    <!-- Withdraw Application Action -->
+                                    <form th:if="${app.status != 'WITHDRAWN' and app.status != 'REJECTED'}" 
+                                          method="post" action="/servlet/applications" 
+                                          class="d-inline ms-1"
+                                          onsubmit="return confirm('Are you sure you want to withdraw this application?');">
+                                        <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
+                                        <input type="hidden" name="action" value="withdraw">
+                                        <input type="hidden" name="applicationId" th:value="${app.id}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Withdraw your job application">
+                                            <i class="bi bi-x-circle me-1"></i> Withdraw
+                                        </button>
+                                    </form>
 
                                     <!-- Collapsible Timeline Element -->
                                     <div class="collapse mt-2" th:id="'timeline' + ${app.id}">

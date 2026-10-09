@@ -35,6 +35,8 @@ public class AuthFilter implements Filter {
             "/servlet/logout",
             "/servlet/statistics",
             "/api/statistics",
+            "/servlet/activities",
+            "/api/activities",
             "/api/jobs",
             "/api/applications",
             "/jobseeker/jobs" // allow public browsing of open jobs
@@ -61,6 +63,15 @@ public class AuthFilter implements Filter {
 
         // If not logged in
         if (userId == null || role == null) {
+            String accept = req.getHeader("Accept");
+            String requestedWith = req.getHeader("X-Requested-With");
+            if (path.startsWith("/api/") || (accept != null && accept.contains("application/json")) || "XMLHttpRequest".equals(requestedWith)) {
+                resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                resp.setContentType("application/json");
+                resp.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Authentication required\"}");
+                return;
+            }
+            resp.setStatus(HttpServletResponse.SC_FOUND);
             resp.sendRedirect(req.getContextPath() + "/login?error=auth_required");
             return;
         }
@@ -70,7 +81,7 @@ public class AuthFilter implements Filter {
         // Enforce Admin role for admin views and admin servlets
         if (path.startsWith("/admin") || path.equals("/servlet/settings") || path.equals("/servlet/users")) {
             if (!"ADMIN".equals(userRole)) {
-                resp.sendRedirect(req.getContextPath() + "/access-denied");
+                sendForbiddenOrRedirect(req, resp, path);
                 return;
             }
         }
@@ -78,7 +89,7 @@ public class AuthFilter implements Filter {
         // Enforce Employer role for employer views and employer servlets (Admin can also manage)
         if (path.startsWith("/employer") || path.equals("/servlet/jobs") || path.equals("/servlet/applications")) {
             if (!"EMPLOYER".equals(userRole) && !"ADMIN".equals(userRole)) {
-                resp.sendRedirect(req.getContextPath() + "/access-denied");
+                sendForbiddenOrRedirect(req, resp, path);
                 return;
             }
         }
@@ -89,7 +100,7 @@ public class AuthFilter implements Filter {
                 || path.equals("/servlet/profile")
                 || path.equals("/servlet/notifications")) {
             if (!"JOB_SEEKER".equals(userRole)) {
-                resp.sendRedirect(req.getContextPath() + "/access-denied");
+                sendForbiddenOrRedirect(req, resp, path);
                 return;
             }
         }
@@ -108,5 +119,18 @@ public class AuthFilter implements Filter {
             }
         }
         return false;
+    }
+
+    private void sendForbiddenOrRedirect(HttpServletRequest req, HttpServletResponse resp, String path) throws IOException {
+        String accept = req.getHeader("Accept");
+        String requestedWith = req.getHeader("X-Requested-With");
+        if (path.startsWith("/api/") || (accept != null && accept.contains("application/json")) || "XMLHttpRequest".equals(requestedWith)) {
+            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            resp.setContentType("application/json");
+            resp.getWriter().write("{\"error\":\"Forbidden\",\"message\":\"Access denied for role\"}");
+        } else {
+            resp.setStatus(HttpServletResponse.SC_FOUND);
+            resp.sendRedirect(req.getContextPath() + "/access-denied");
+        }
     }
 }

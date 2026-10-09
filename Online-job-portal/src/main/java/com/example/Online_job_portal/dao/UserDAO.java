@@ -6,6 +6,8 @@ import com.example.Online_job_portal.model.Employer;
 import com.example.Online_job_portal.model.JobSeeker;
 import com.example.Online_job_portal.model.User;
 import com.example.Online_job_portal.util.PasswordUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.sql.*;
@@ -18,12 +20,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Repository
 public class UserDAO implements DAO<User> {
 
+    private static final Logger log = LoggerFactory.getLogger(UserDAO.class);
+
     private final List<User> users = new CopyOnWriteArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger(10);
     private volatile boolean useMemoryStore = false;
 
     public UserDAO() {
         seedInitialUsers();
+    }
+
+    private static boolean isStrictDbMode() {
+        return "true".equalsIgnoreCase(System.getenv("STRICT_DB_MODE"))
+                || "true".equalsIgnoreCase(System.getProperty("STRICT_DB_MODE"));
+    }
+
+    private void handleSqlException(String operation, SQLException e) {
+        log.error("Database SQL failure during [{}] in UserDAO: {}", operation, e.getMessage(), e);
+        if (isStrictDbMode()) {
+            throw new RuntimeException("Database operation [" + operation + "] failed in UserDAO", e);
+        }
+        useMemoryStore = true;
     }
 
     public boolean isUseMemoryStore() {
@@ -81,7 +98,7 @@ public class UserDAO implements DAO<User> {
             }
             saveInMemory(user);
         } catch (SQLException e) {
-            useMemoryStore = true;
+            handleSqlException("save", e);
             saveInMemory(user);
         }
     }
@@ -129,7 +146,7 @@ public class UserDAO implements DAO<User> {
                 }
             }
         } catch (SQLException e) {
-            useMemoryStore = true;
+            handleSqlException("findById", e);
             return findInMemoryById(id);
         }
 
@@ -158,7 +175,7 @@ public class UserDAO implements DAO<User> {
                 }
             }
         } catch (SQLException e) {
-            useMemoryStore = true;
+            handleSqlException("findByEmail", e);
             return findInMemoryByEmail(trimmed);
         }
 
@@ -187,7 +204,7 @@ public class UserDAO implements DAO<User> {
             }
             return new ArrayList<>(users);
         } catch (SQLException e) {
-            useMemoryStore = true;
+            handleSqlException("findAll", e);
             return new ArrayList<>(users);
         }
     }

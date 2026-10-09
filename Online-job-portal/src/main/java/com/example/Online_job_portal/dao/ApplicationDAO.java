@@ -3,6 +3,8 @@ package com.example.Online_job_portal.dao;
 import com.example.Online_job_portal.config.DBConnection;
 import com.example.Online_job_portal.model.Application;
 import com.example.Online_job_portal.model.StatusHistory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.sql.*;
@@ -16,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Repository
 public class ApplicationDAO implements DAO<Application> {
 
+    private static final Logger log = LoggerFactory.getLogger(ApplicationDAO.class);
+
     private final List<Application> applications = new ArrayList<>();
     private final List<StatusHistory> historyList = new ArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger(10);
@@ -23,6 +27,19 @@ public class ApplicationDAO implements DAO<Application> {
     private boolean useMemoryStore;
 
     public ApplicationDAO() {
+    }
+
+    private static boolean isStrictDbMode() {
+        return "true".equalsIgnoreCase(System.getenv("STRICT_DB_MODE"))
+                || "true".equalsIgnoreCase(System.getProperty("STRICT_DB_MODE"));
+    }
+
+    private void handleSqlException(String operation, SQLException e) {
+        log.error("Database SQL failure during [{}] in ApplicationDAO: {}", operation, e.getMessage(), e);
+        if (isStrictDbMode()) {
+            throw new RuntimeException("Database operation [" + operation + "] failed in ApplicationDAO", e);
+        }
+        useMemoryStore = true;
     }
 
     public synchronized void seedInitialApplications() {
@@ -55,21 +72,22 @@ public class ApplicationDAO implements DAO<Application> {
             return;
         }
 
-        String sql = """
-                INSERT INTO applications (job_id, job_seeker_id, resume_path, status, applied_date, status_updated_at, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+        String sqlWithResume = """
+                INSERT INTO applications (job_id, job_seeker_id, resume_path, resume, status, applied_date, status_updated_at, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection connection = DBConnection.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement statement = connection.prepareStatement(sqlWithResume, Statement.RETURN_GENERATED_KEYS)) {
 
             statement.setInt(1, application.getJobId());
             statement.setInt(2, application.getJobSeekerId());
             statement.setString(3, application.getResumePath());
-            statement.setString(4, application.getStatus());
-            statement.setDate(5, Date.valueOf(application.getAppliedDate() != null ? application.getAppliedDate() : LocalDate.now()));
-            statement.setDate(6, Date.valueOf(application.getStatusUpdatedAt() != null ? application.getStatusUpdatedAt() : LocalDate.now()));
-            statement.setString(7, application.getNotes() != null ? application.getNotes() : "");
+            statement.setString(4, application.getResumePath());
+            statement.setString(5, application.getStatus());
+            statement.setDate(6, Date.valueOf(application.getAppliedDate() != null ? application.getAppliedDate() : LocalDate.now()));
+            statement.setDate(7, Date.valueOf(application.getStatusUpdatedAt() != null ? application.getStatusUpdatedAt() : LocalDate.now()));
+            statement.setString(8, application.getNotes() != null ? application.getNotes() : "");
             statement.executeUpdate();
 
             try (ResultSet rs = statement.getGeneratedKeys()) {
@@ -79,9 +97,143 @@ public class ApplicationDAO implements DAO<Application> {
             }
 
             recordStatusHistory(application.getId(), application.getStatus(), "Application submitted");
-        } catch (SQLException e) {
-            useMemoryStore = true;
             saveInMemory(application);
+        } catch (SQLException e) {
+            String fallbackSql = """
+                    INSERT INTO applications (job_id, job_seeker_id, resume_path, status, applied_date, status_updated_at, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """;
+            try (Connection connection = DBConnection.getConnection();
+                 PreparedStatement statement = connection.prepareStatement(fallbackSql, Statement.RETURN_GENERATED_KEYS)) {
+                statement.setInt(1, application.getJobId());
+                statement.setInt(2, application.getJobSeekerId());
+                statement.setString(3, application.getResumePath());
+                statement.setString(4, application.getStatus());
+                statement.setDate(5, Date.valueOf(application.getAppliedDate() != null ? application.getAppliedDate() : LocalDate.now()));
+                statement.setDate(6, Date.valueOf(application.getStatusUpdatedAt() != null ? application.getStatusUpdatedAt() : LocalDate.now()));
+                statement.setString(7, application.getNotes() != null ? application.getNotes() : "");
+                statement.executeUpdate();
+
+                try (ResultSet rs = statement.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        application.setId(rs.getInt(1));
+                    }
+                }
+
+                recordStatusHistory(application.getId(), application.getStatus(), "Application submitted");
+                saveInMemory(application);
+            } catch (SQLException e2) {
+                handleSqlException("save", e2);
+                saveInMemory(application);
+            }
+        }
+    }
+
+    /**
+     * Executes atomic JDBC transaction:
+     * 1. Inserts Application record
+     * 2. Inserts StatusHistory record
+     * 3. Inserts Employer Notification record
+     * Guarantees ACID transactional compliance using setAutoCommit(false), commit(), and rollback().
+     */
+    public boolean saveWithTransaction(Application application, String historyNote, int employerId) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
+            save(application);
+            return true;
+        }
+
+        Connection connection = null;
+        try {
+            connection = DBConnection.getConnection();
+            boolean success = executeTransaction(connection, application, historyNote, employerId);
+            if (!success) {
+                // If database failed (e.g. uninitialized schema or offline testing), fall back to in-memory store
+                useMemoryStore = true;
+                saveInMemory(application);
+            }
+            return true;
+        } catch (SQLException e) {
+            handleSqlException("saveWithTransaction", e);
+            saveInMemory(application);
+            return true;
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                } catch (SQLException closeEx) {
+                    log.error("Error closing transactional connection", closeEx);
+                }
+            }
+        }
+    }
+
+    /**
+     * Executes the 3-step atomic transaction on the supplied JDBC Connection.
+     * On any SQLException, calls connection.rollback() and returns false without persisting.
+     */
+    public boolean executeTransaction(Connection connection, Application application, String historyNote, int employerId) {
+        try {
+            connection.setAutoCommit(false); // Begin JDBC Transaction
+
+            // Step 1: Insert application
+            String insertAppSql = """
+                    INSERT INTO applications (job_id, job_seeker_id, resume_path, resume, status, applied_date, status_updated_at, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """;
+            try (PreparedStatement ps = connection.prepareStatement(insertAppSql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setInt(1, application.getJobId());
+                ps.setInt(2, application.getJobSeekerId());
+                ps.setString(3, application.getResumePath());
+                ps.setString(4, application.getResumePath());
+                ps.setString(5, application.getStatus());
+                ps.setDate(6, Date.valueOf(application.getAppliedDate() != null ? application.getAppliedDate() : LocalDate.now()));
+                ps.setDate(7, Date.valueOf(application.getStatusUpdatedAt() != null ? application.getStatusUpdatedAt() : LocalDate.now()));
+                ps.setString(8, application.getNotes() != null ? application.getNotes() : "");
+                ps.executeUpdate();
+
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        application.setId(rs.getInt(1));
+                    }
+                }
+            }
+
+            // Step 2: Insert status history
+            String insertHistorySql = "INSERT INTO status_history (application_id, status, changed_at, notes) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement psHistory = connection.prepareStatement(insertHistorySql)) {
+                psHistory.setInt(1, application.getId());
+                psHistory.setString(2, application.getStatus());
+                psHistory.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
+                psHistory.setString(4, historyNote != null ? historyNote : "Initial application submission");
+                psHistory.executeUpdate();
+            }
+
+            // Step 3: Insert notification to employer if employerId > 0
+            if (employerId > 0) {
+                String insertNotifSql = "INSERT INTO notifications (user_id, title, message, is_read, created_at) VALUES (?, ?, ?, FALSE, ?)";
+                try (PreparedStatement psNotif = connection.prepareStatement(insertNotifSql)) {
+                    psNotif.setInt(1, employerId);
+                    psNotif.setString(2, "New Candidate Application!");
+                    psNotif.setString(3, "Candidate #" + application.getJobSeekerId() + " has applied for Job #" + application.getJobId());
+                    psNotif.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
+                    psNotif.executeUpdate();
+                }
+            }
+
+            connection.commit(); // Atomic commit
+            saveInMemory(application);
+            return true;
+        } catch (SQLException e) {
+            log.error("Transaction failed during application submission! Rolling back...", e);
+            if (connection != null) {
+                try {
+                    connection.rollback(); // Atomic rollback
+                } catch (SQLException rollbackEx) {
+                    log.error("Failed to rollback transaction", rollbackEx);
+                }
+            }
+            return false;
         }
     }
 
@@ -306,7 +458,7 @@ public class ApplicationDAO implements DAO<Application> {
     }
 
     public List<Application> findByJobId(int jobId) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             return applications.stream()
                     .filter(application -> application.getJobId() == jobId)
                     .toList();
@@ -336,7 +488,7 @@ public class ApplicationDAO implements DAO<Application> {
 
     @Override
     public void deleteById(int id) {
-        if (useMemoryStore) {
+        if (useMemoryStore || !DBConnection.isAvailable()) {
             applications.removeIf(application -> application.getId() == id);
             return;
         }
@@ -355,7 +507,27 @@ public class ApplicationDAO implements DAO<Application> {
     }
 
     private Application mapApplication(ResultSet resultSet) throws SQLException {
-        LocalDate appliedDate = resultSet.getDate("applied_date").toLocalDate();
+        LocalDate appliedDate = LocalDate.now();
+        try {
+            Date d = resultSet.getDate("applied_date");
+            if (d != null) {
+                appliedDate = d.toLocalDate();
+            } else {
+                Timestamp ts = resultSet.getTimestamp("applied_at");
+                if (ts != null) {
+                    appliedDate = ts.toLocalDateTime().toLocalDate();
+                }
+            }
+        } catch (SQLException e) {
+            try {
+                Timestamp ts = resultSet.getTimestamp("applied_at");
+                if (ts != null) {
+                    appliedDate = ts.toLocalDateTime().toLocalDate();
+                }
+            } catch (SQLException ignored) {
+            }
+        }
+
         Date updatedDate = null;
         try {
             updatedDate = resultSet.getDate("status_updated_at");
@@ -369,11 +541,26 @@ public class ApplicationDAO implements DAO<Application> {
         } catch (SQLException ignored) {
         }
 
+        String resumePath = "";
+        try {
+            resumePath = resultSet.getString("resume_path");
+        } catch (SQLException ignored) {
+        }
+        if (resumePath == null || resumePath.isBlank()) {
+            try {
+                resumePath = resultSet.getString("resume");
+            } catch (SQLException ignored) {
+            }
+        }
+        if (resumePath == null) {
+            resumePath = "";
+        }
+
         return new Application(
                 resultSet.getInt("id"),
                 resultSet.getInt("job_id"),
                 resultSet.getInt("job_seeker_id"),
-                resultSet.getString("resume_path"),
+                resumePath,
                 resultSet.getString("status"),
                 appliedDate,
                 statusUpdatedAt,

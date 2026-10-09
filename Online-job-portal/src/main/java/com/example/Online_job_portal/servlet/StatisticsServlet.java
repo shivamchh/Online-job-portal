@@ -16,14 +16,20 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.time.format.TextStyle;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
  * Servlet providing statistical data in JSON format for Chart.js graphs.
+ * Uses only real data: jobs per month for the last 6 months (year-aware),
+ * application counts by status, and user counts by role.
  */
 @WebServlet(name = "StatisticsServlet", urlPatterns = {"/servlet/statistics", "/api/statistics"})
 public class StatisticsServlet extends HttpServlet {
+
+    private static final int MONTHS_SHOWN = 6;
+    private static final DateTimeFormatter LABEL = DateTimeFormatter.ofPattern("MMM yy", Locale.ENGLISH);
 
     @Autowired
     private JobService jobService;
@@ -33,6 +39,15 @@ public class StatisticsServlet extends HttpServlet {
 
     @Autowired
     private UserService userService;
+
+    public StatisticsServlet() {
+    }
+
+    public StatisticsServlet(JobService jobService, ApplicationService applicationService, UserService userService) {
+        this.jobService = jobService;
+        this.applicationService = applicationService;
+        this.userService = userService;
+    }
 
     @Override
     public void init() throws ServletException {
@@ -53,96 +68,77 @@ public class StatisticsServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
 
         List<Job> allJobs = jobService != null ? jobService.getAllJobs() : Collections.emptyList();
-        List<Application> allApplications = applicationService != null ? applicationService.getAllApplications() : Collections.emptyList();
+        List<Application> allApplications =
+                applicationService != null ? applicationService.getAllApplications() : Collections.emptyList();
         List<User> allUsers = userService != null ? userService.getAllUsers() : Collections.emptyList();
 
-        // 1. Group jobs by month
-        Map<String, Integer> jobsByMonth = new LinkedHashMap<>();
-        String[] months = {"May", "Jun", "Jul", "Aug", "Sep", "Oct"};
-        for (String m : months) {
-            jobsByMonth.put(m, 0);
+        // 1. Jobs per month for the last N months, built from today's date (no hardcoded months, no fake data)
+        Map<YearMonth, Integer> monthCounts = new LinkedHashMap<>();
+        YearMonth current = YearMonth.now();
+        for (int i = MONTHS_SHOWN - 1; i >= 0; i--) {
+            monthCounts.put(current.minusMonths(i), 0);
         }
         for (Job job : allJobs) {
             if (job.getCreatedAt() != null) {
-                String mName = job.getCreatedAt().getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
-                jobsByMonth.put(mName, jobsByMonth.getOrDefault(mName, 0) + 1);
+                YearMonth ym = YearMonth.from(job.getCreatedAt());
+                if (monthCounts.containsKey(ym)) {
+                    monthCounts.merge(ym, 1, Integer::sum);
+                }
             }
         }
-        // Ensure some baseline demo distribution if newly launched
-        if (allJobs.isEmpty() || jobsByMonth.values().stream().allMatch(v -> v == 0)) {
-            jobsByMonth.put("May", 2);
-            jobsByMonth.put("Jun", 4);
-            jobsByMonth.put("Jul", 5);
-            jobsByMonth.put("Aug", 7);
-            jobsByMonth.put("Sep", 9);
-            jobsByMonth.put("Oct", Math.max(allJobs.size(), 12));
+        Map<String, Integer> jobsByMonth = new LinkedHashMap<>();
+        for (Map.Entry<YearMonth, Integer> e : monthCounts.entrySet()) {
+            jobsByMonth.put(e.getKey().format(LABEL), e.getValue());
         }
 
-        // 2. Group applications by status
+        // 2. Applications by status (dynamically built from ApplicationStatus.values() enum)
         Map<String, Integer> appStatusCounts = new LinkedHashMap<>();
-        appStatusCounts.put("SUBMITTED", 0);
-        appStatusCounts.put("PENDING", 0);
-        appStatusCounts.put("SHORTLISTED", 0);
-        appStatusCounts.put("APPROVED", 0);
-        appStatusCounts.put("REJECTED", 0);
-
+        for (com.example.Online_job_portal.model.enums.ApplicationStatus st : com.example.Online_job_portal.model.enums.ApplicationStatus.values()) {
+            appStatusCounts.put(st.getCode(), 0);
+        }
         for (Application app : allApplications) {
             String status = app.getStatus() != null ? app.getStatus().toUpperCase() : "SUBMITTED";
-            appStatusCounts.put(status, appStatusCounts.getOrDefault(status, 0) + 1);
+            appStatusCounts.merge(status, 1, Integer::sum);
         }
 
-        // 3. Group users by role
+        // 3. Users by role
         Map<String, Integer> roleCounts = new LinkedHashMap<>();
         roleCounts.put("JOB_SEEKER", 0);
         roleCounts.put("EMPLOYER", 0);
         roleCounts.put("ADMIN", 0);
-
         for (User u : allUsers) {
             String role = (userService != null ? userService.getRole(u) : "JOB_SEEKER").toUpperCase();
-            roleCounts.put(role, roleCounts.getOrDefault(role, 0) + 1);
+            roleCounts.merge(role, 1, Integer::sum);
         }
 
-        // Build JSON output
-        StringBuilder json = new StringBuilder();
-        json.append("{");
+        // Build JSON
+        StringBuilder json = new StringBuilder("{");
         json.append("\"totalJobs\":").append(allJobs.size()).append(",");
         json.append("\"totalApplications\":").append(allApplications.size()).append(",");
         json.append("\"totalUsers\":").append(allUsers.size()).append(",");
-
-        // jobsByMonth
-        json.append("\"jobsByMonth\":{");
-        int i = 0;
-        for (Map.Entry<String, Integer> entry : jobsByMonth.entrySet()) {
-            if (i > 0) json.append(",");
-            json.append("\"").append(entry.getKey()).append("\":").append(entry.getValue());
-            i++;
-        }
-        json.append("},");
-
-        // applicationStatuses
-        json.append("\"applicationStatuses\":{");
-        i = 0;
-        for (Map.Entry<String, Integer> entry : appStatusCounts.entrySet()) {
-            if (i > 0) json.append(",");
-            json.append("\"").append(entry.getKey()).append("\":").append(entry.getValue());
-            i++;
-        }
-        json.append("},");
-
-        // roleCounts
-        json.append("\"roleCounts\":{");
-        i = 0;
-        for (Map.Entry<String, Integer> entry : roleCounts.entrySet()) {
-            if (i > 0) json.append(",");
-            json.append("\"").append(entry.getKey()).append("\":").append(entry.getValue());
-            i++;
-        }
-        json.append("}");
-
+        json.append("\"jobsByMonth\":").append(toJsonObject(jobsByMonth)).append(",");
+        json.append("\"applicationStatuses\":").append(toJsonObject(appStatusCounts)).append(",");
+        json.append("\"roleCounts\":").append(toJsonObject(roleCounts));
         json.append("}");
 
         PrintWriter out = resp.getWriter();
-        out.print(json.toString());
+        out.print(json);
         out.flush();
+    }
+
+    /** Converts a map of String to Integer into a JSON object string. */
+    private String toJsonObject(Map<String, Integer> map) {
+        StringBuilder sb = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Integer> entry : map.entrySet()) {
+            if (!first) sb.append(",");
+            sb.append("\"").append(escape(entry.getKey())).append("\":").append(entry.getValue());
+            first = false;
+        }
+        return sb.append("}").toString();
+    }
+
+    private String escape(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

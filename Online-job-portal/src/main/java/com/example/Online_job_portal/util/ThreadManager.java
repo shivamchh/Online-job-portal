@@ -19,11 +19,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ThreadManager {
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(4);
+    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private final AtomicInteger activeTasksCount = new AtomicInteger(0);
     private final AtomicInteger totalExecutedCount = new AtomicInteger(0);
     private final Map<String, Long> taskExecutionTimestamps = new ConcurrentHashMap<>();
 
     private int peakConcurrentTasks = 0;
+
+    /**
+     * Schedules a periodic recurring task using ScheduledExecutorService.
+     */
+    public ScheduledFuture<?> schedulePeriodicTask(Runnable task, long initialDelay, long period, TimeUnit unit) {
+        return scheduledExecutor.scheduleAtFixedRate(task, initialDelay, period, unit);
+    }
 
     /**
      * Executes a background task while atomically tracking active concurrency.
@@ -86,5 +94,6 @@ public class ThreadManager {
     @PreDestroy
     public void shutdown() {
         executorService.shutdown();
+        scheduledExecutor.shutdown();
     }
 }

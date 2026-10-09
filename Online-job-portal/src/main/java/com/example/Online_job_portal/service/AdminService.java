@@ -82,4 +82,8 @@ public class AdminService {
     public void toggleJobStatus(int jobId) {
         jobService.toggleJobStatus(jobId);
     }
+
+    public void updateJobStatus(int jobId, String status) {
+        jobService.setJobStatus(jobId, status);
+    }
 }

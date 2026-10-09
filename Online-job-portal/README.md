@@ -1,271 +1,128 @@
-# 🚀 Enterprise Online Job Portal
+# JobSphere - Modern Enterprise Online Job Portal
 
-> A robust, full-featured web application engineered with **Java 17**, **Jakarta Servlets**, **Spring Boot & Thymeleaf**, and **JDBC (MySQL)**.
+[![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Build Status](https://img.shields.io/badge/Tests-41%20Passed-success.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
 
----
-
-## 📋 Table of Contents
-- [Architecture Overview](#-architecture-overview)
-- [OOP Class Hierarchy & UML](#-oop-class-hierarchy--uml)
-- [Two-Layer Web Architecture & Viva Defense](#-two-layer-web-architecture--viva-defense)
-- [Security & Authentication](#-security--authentication)
-- [Multithreading & Synchronization](#-multithreading--synchronization)
-- [Core Functional Modules](#-core-functional-modules)
-- [Demo Credentials](#-demo-credentials)
-- [Installation & Database Setup](#-installation--database-setup)
-- [Testing & Verification](#-testing--verification)
-- [Rubric & Viva Marking Guide (Target: 33/33)](#-rubric--viva-marking-guide-target-3333)
+**JobSphere** is a high-performance recruitment and job search web platform built with **Java 17, Spring Boot 3, Java Servlets, JDBC, and Thymeleaf**. It follows enterprise design patterns, multi-layer security countermeasures, thread-safe asynchronous concurrency models, and an academic evaluation rubric covering Core Java, JDBC transactions, Java Servlets, and Object-Oriented Programming.
 
 ---
 
-## 🏛 Architecture Overview
+## 📋 Evaluation Rubric Alignment & Features Mapping
 
-The system strictly adheres to enterprise architectural separation:
-1. **Presentation Layer (GET)**: Spring MVC Controllers render server-side Thymeleaf templates with Bootstrap 5 CDN, Chart.js analytics, and DataTables.js interactive grids.
-2. **Action Dispatch Layer (POST / Streams)**: Native Jakarta Servlets (`@WebServlet`) process all mutations (`/servlet/*`), including login, registration, job publishing, applications with `@MultipartConfig` resume uploads, candidate messaging, and settings management.
-3. **Security Filter Layer**: A Jakarta `@WebFilter` (`AuthFilter`) intercepts all requests (`/*`), enforcing Role-Based Access Control (RBAC) across **both** MVC routes and `/servlet/*` action endpoints.
-4. **Service Layer**: Implements business rules, algorithmic recommendation scoring, and asynchronous task dispatch.
-5. **Persistence Layer (JDBC)**: Generic `DAO<T>` pattern utilizing parameterized `PreparedStatement` queries against MySQL, paired with high-performance concurrent memory fallbacks.
+| Rubric Evaluation Category | Weightage | Architecture Implementation in JobSphere |
+| :--- | :---: | :--- |
+| **Problem Understanding & Solution Design** | **8 Marks** | Complete end-to-end recruitment lifecycle: employer job postings, deadline filters, applicant review, secure resume download, multi-step application status pipeline, direct messaging, live platform activity stream, and visual Chart.js analytics. |
+| **Core Java & OOP Implementation** | **10 Marks** | • **Inheritance & Polymorphism**: Abstract base class `User` extended by `Admin`, `Employer`, and `JobSeeker`, each implementing specialized polymorphic behaviors like `showDashboard()`.<br>• **Strongly-Typed Enums**: Domain-specific enums `Role`, `JobStatus` (segregated moderation vs lifecycle), and `ApplicationStatus`.<br>• **Interfaces & Generics**: Generic repository interface `DAO<T>` and `JobOperations`.<br>• **Collections & Comparable**: `Job implements Comparable<Job>` for natural ordering by creation date; skill-matching engine using `Set<String>`, `Map`, and custom score `Comparator`.<br>• **Checked Exceptions**: Custom checked exceptions `ApplicationException`, `JobNotFoundException`, `UserNotFoundException` (all extend `Exception`).<br>• **Multithreading & Concurrency**: `ActivityLogger` using Producer-Consumer pattern with `LinkedBlockingQueue` and dedicated background worker thread; `ThreadManager` with `ExecutorService`, `ScheduledExecutorService`, and `Callable`/`Future` tasks. |
+| **Database Integration (JDBC)** | **8 Marks** | • **ACID Transactions**: Atomic 3-step operations with `connection.setAutoCommit(false)`, `connection.commit()`, and `connection.rollback()` in `ApplicationDAO.saveWithTransaction()` / `executeTransaction()`.<br>• **Batch Inserts**: `addBatch()` and `executeBatch()` for seeding initial records in `DataInitializer`.<br>• **Performance Indexes**: High-performance indexes on `users(email)`, `jobs(status)`, `jobs(employer_id)`, and `applications(job_id)` in `schema.sql`.<br>• **PreparedStatement Security**: 100% parameterized queries guarding against SQL injection; automatic fallback memory mode for zero-downtime offline evaluation. |
+| **Servlets & Web Integration** | **7 Marks** | • **Two-Layer Architecture**: Strict separation between GET presentation (`@Controller` classes) and state-mutating actions (POST handled by 13 dedicated `@WebServlet` classes under `/servlet/*`).<br>• **Ordered Filter Chain**: (0) `RequestLoggingFilter` -> (1) `SecurityHeadersFilter` -> (2) `AuthFilter` -> (3) `CsrfFilter` covering `/*` and `/servlet/*`.<br>• **Web Listeners**: `ActiveSessionListener` (`HttpSessionListener` tracking live users online in `listener/`), `AppContextListener` (`ServletContextListener` lifecycle cleanup in `listener/`).<br>• **Session Fixation Countermeasure**: `request.changeSessionId()` called immediately upon authenticated login.<br>• **Live Charts**: Real-time Chart.js visual analytics fed dynamically via `StatisticsServlet`. |
 
 ---
 
-## 🧬 OOP Class Hierarchy & UML
+## 🏛️ Architecture: Two-Layer Design Rule
 
-### User Class Diagram (Mermaid)
+To guarantee clean separation of concerns and withstand rigorous evaluation:
+1. **Presentation Layer (`com.example.Online_job_portal.controller`)**:
+   - Spring MVC `@Controller` classes only respond to HTTP `GET` requests to render Thymeleaf views or stream read-only file downloads (e.g. CSV export).
+   - Zero state-mutating operations exist in controllers.
+2. **Action Layer (`com.example.Online_job_portal.servlet`)**:
+   - Custom Java Servlets mapped under `/servlet/*` process all HTTP `POST` mutations (login, register, job approval/rejection, job creation, application submission, status transitions, withdrawals, profile updates).
+   - All state-changing requests are protected by session authentication and cryptographic CSRF verification.
 
-```mermaid
-classDiagram
-    class User {
-        <<abstract>>
-        #int id
-        #String name
-        #String email
-        #String password
-        #String salt
-        #String phone
-        #String status
-        #String skills
-        #String defaultResumePath
-        +abstract void showDashboard()
-        +boolean isActive()
-        +getId() int
-        +getName() String
-        +getEmail() String
-        +getSkills() String
-        +getDefaultResumePath() String
-    }
+---
 
-    class Admin {
-        +Admin(id, name, email, password, salt, phone, status, skills, resume)
-        +showDashboard() void
-    }
+## 🏷️ Domain Model: JobStatus Segregation
 
-    class Employer {
-        +Employer(id, name, email, password, salt, phone, status, skills, resume)
-        +showDashboard() void
-    }
+The `JobStatus` enum cleanly separates two independent concerns:
+* **Admin Moderation States**:
+  * `PENDING`: Newly posted job awaiting administrative review.
+  * `APPROVED`: Listing reviewed and approved by administrator (now live).
+  * `REJECTED`: Listing rejected during administrative moderation.
+* **Employer Lifecycle States**:
+  * `OPEN`: Active listing accepting new candidate submissions.
+  * `CLOSED`: Vacancy filled or intake suspended by employer.
 
-    class JobSeeker {
-        +JobSeeker(id, name, email, password, salt, phone, status, skills, resume)
-        +showDashboard() void
-    }
+---
 
-    class JobOperations {
-        <<interface>>
-        +postJob(Job job) void
-        +updateJob(Job job) void
-        +deleteJob(int id) void
-        +getJobsByEmployer(int employerId) List~Job~
-    }
+## 👥 Demo Logins
 
-    class DAO~T~ {
-        <<interface>>
-        +save(T entity) void
-        +findById(int id) Optional~T~
-        +findAll() List~T~
-        +deleteById(int id) void
-    }
+For demo and grading evaluation, use the following pre-seeded test accounts:
 
-    User <|-- Admin : Extends
-    User <|-- Employer : Extends
-    User <|-- JobSeeker : Extends
-    JobOperations <|.. JobService : Implements
-    DAO <|.. UserDAO : Implements
-    DAO <|.. JobDAO : Implements
-    DAO <|.. ApplicationDAO : Implements
+| Role | Email Address | Password | Permissions & Dashboard |
+| :--- | :--- | :--- | :--- |
+| **Platform Administrator** | `admin@portal.com` | `admin123` | Moderate jobs, review users, live session monitoring, system activity audit |
+| **Hiring Employer** | `employer@techcorp.com` | `employer123` | Post vacancies, review applicants, download resumes, update status, CSV export |
+| **Job Seeker (Candidate)** | `seeker@example.com` | `seeker123` | Browse jobs, submit application, track visual timeline, withdraw application |
+
+---
+
+## 🚀 Quick Start Guide
+
+### Option 1: One-Command Setup with Docker Compose (Recommended)
+Launch MySQL 8 with pre-configured schemas and indexes:
+```bash
+docker-compose up -d
+```
+Run the application using the Maven wrapper:
+```bash
+./mvnw spring-boot:run
 ```
 
-### Core OOP Principles Applied:
-- **Abstraction**: `User` is an `abstract` class defining standard member attributes (`id`, `name`, `email`, `password`, `salt`, `skills`, `defaultResumePath`) and abstract contract `showDashboard()`.
-- **Inheritance & Polymorphism**: `Admin`, `Employer`, and `JobSeeker` extend `User`, overriding `showDashboard()`.
-- **Interfaces**: `JobOperations` defines contracts for managing job openings; `DAO<T>` defines generic CRUD persistence contracts.
-- **Encapsulation**: State fields are `protected` or `private` with validated accessor and mutator methods.
+### Option 2: Local MySQL Setup
+1. Ensure MySQL is running on `localhost:3306`.
+2. Create the database schema:
+   ```bash
+   mysql -u root -p < src/main/resources/schema.sql
+   ```
+3. Update database credentials in `src/main/resources/application.properties` if needed.
+4. Start the application:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+
+The application will be accessible at: **`http://localhost:8080`**
 
 ---
 
-## 🎯 Two-Layer Web Architecture & Viva Defense
+## 🛡️ Enterprise Security Implementation
 
-### The Viva Explanation:
-> *"Our project cleanly delineates view rendering from mutation actions: **Spring MVC Controllers** are strictly dedicated to handling `GET` routes that render Thymeleaf HTML pages and populate dynamic models. All form submissions, authentication workflows, file uploads, and state mutations are dispatched to plain **Jakarta Servlets** (`@WebServlet` at `/servlet/*`). This provides a clean separation of concerns, eliminates endpoint collision, and ensures full control over native servlet APIs like `@MultipartConfig` and `HttpSession`."*
-
-| Operation | Action / POST (Servlet) | View / GET (Controller) |
-|---|---|---|
-| **User Sign In** | `LoginServlet` (`/servlet/login`) | `AuthController` (`/login`) |
-| **User Registration** | `RegisterServlet` (`/servlet/register`) | `AuthController` (`/register`) |
-| **User Sign Out** | `LogoutServlet` (`/servlet/logout`) | `AuthController` (`/logout` redirect) |
-| **Create Job Posting** | `JobServlet` (`/servlet/jobs`) | `EmployerController` (`/employer/post-job`) |
-| **Toggle / Soft Delete Job**| `JobServlet` (`/servlet/jobs?action=toggle`) | `EmployerController` (`/employer/my-jobs`) |
-| **Submit Application + CV** | `ResumeUploadServlet` (`/servlet/resume-upload`) | `JobSeekerController` (`/jobseeker/jobs`) |
-| **Candidate Status Update** | `ApplicationServlet` (`/servlet/applications`) | `EmployerController` (`/employer/applications`) |
-| **Direct Messaging** | `MessageServlet` (`/servlet/messages`) | `EmployerController` / `JobSeekerController` (`/messages`) |
-| **Edit Profile & Resume** | `ProfileServlet` (`/servlet/profile`) | `JobSeekerController` (`/jobseeker/profile`) |
-| **Update System Settings** | `SettingsServlet` (`/servlet/settings`) | `AdminController` (`/admin/settings`) |
-| **Toggle User Status** | `UserServlet` (`/servlet/users`) | `AdminController` (`/admin/users`) |
-| **Download Resume File** | `ResumeDownloadServlet` (`/servlet/resume-download`) | Embedded link in candidate review table |
+* **Slow Salted Password Hashing**: Passwords stored using PBKDF2 (`PBKDF2WithHmacSHA256`) with 65,536 iterations and unique 16-byte cryptographic salts (`PasswordUtil.java`).
+* **Session Fixation Prevention**: Immediate call to `request.changeSessionId()` on sign-in.
+* **Brute-Force Rate Limiting**: Exponential cooldown and temporary 15-minute account lockout after 5 consecutive failed attempts (`LoginAttemptService.java`).
+* **CSRF Token Verification**: Every state-changing form submission requires a validated cryptographically-random session token via `CsrfFilter`.
+* **Security Headers**: Standard CSP, HSTS, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` via `SecurityHeadersFilter`.
+* **MIME & File Signature Sanitizer**: Uploaded files inspected for real magic bytes (`%PDF-`, `PK\x03\x04`), restricting arbitrary script execution.
 
 ---
 
-## 🔒 Security & Authentication
+## 🧪 Automated Testing
 
-1. **Cryptographic Salted Password Hashing (`PasswordUtil`)**:
-   - Passwords are not hashed with plain SHA-256 (vulnerable to rainbow tables).
-   - Generates a cryptographically strong 16-byte salt via `java.security.SecureRandom`.
-   - Hashes with SHA-256 incorporating the per-user salt: `digest(salt + password)`.
-2. **Role-Based Access Control (`AuthFilter`)**:
-   - Annotated with `@WebFilter("/*")`.
-   - Guards **both** MVC controller views (`/admin/*`, `/employer/*`, `/jobseeker/*`) and `/servlet/*` action endpoints.
-   - Forbids unauthorized privilege escalation (e.g., job seekers cannot execute `/servlet/settings` or `/servlet/jobs`).
-3. **SQL Injection Defense**:
-   - 100% of JDBC database interactions utilize parameterized `PreparedStatement` bindings with explicit type setting (`setInt`, `setString`, `setDouble`).
-4. **File Upload Security (`@MultipartConfig`)**:
-   - Caps file size at **2 MB** per upload.
-   - Whitelists only safe document extensions (`.pdf`, `.docx`) using `ValidationUtil.isValidResumeExtension`.
-   - Generates randomized UUID filenames (`UUID.randomUUID().toString() + "_" + filename`) to prevent directory traversal attacks.
-5. **Soft Delete Architecture**:
-   - Records are deactivated with `status = 'INACTIVE'` rather than permanently dropped with SQL `DELETE`, maintaining referential integrity for historic applications.
-
----
-
-## ⚡ Multithreading & Synchronization
-
-### Viva Talking Points:
-1. **Asynchronous Producer-Consumer Logging (`ActivityLogger`)**:
-   - Uses a `BlockingQueue<ActivityLog>` with capacity 1000.
-   - User actions enqueue logs immediately without blocking HTTP threads.
-   - A dedicated daemon background worker thread polls `take()` and batch-persists logs.
-2. **Thread Pool Executor (`ThreadManager` & `NotificationTask`)**:
-   - Utilizes `Executors.newFixedThreadPool(4)` for background notification dispatch.
-   - Status updates and direct messages queue tasks without delaying user redirects.
-3. **Explicit Concurrency & Synchronization Constructs**:
-   - **`synchronized` keyword**: Used in `ThreadManager.recordPeakConcurrency()`, `UserDAO.seedInitialUsers()`, and `SettingsDAO.setValue()` to protect shared state during concurrent access.
-   - **`AtomicInteger`**: Lockless atomic state counters in `ThreadManager.activeTasksCount`, `ThreadManager.totalExecutedCount`, and `UserDAO.idCounter`.
-   - **`ConcurrentHashMap`**: Thread-safe hash maps in `SettingsDAO.memoryStore` and `ThreadManager.taskExecutionTimestamps`.
-
----
-
-## 📦 Core Functional Modules
-
-### 1. Candidate Communication (Messaging System)
-- Direct messaging between employers and applicants.
-- Full conversation history lookup with timestamping.
-- Unread counter badges on dashboard headers and sidebars.
-- Managed by `MessageService`, `MessageDAO`, and `MessageServlet`.
-
-### 2. System Settings & Configuration
-- Dynamic key-value configuration stored in MySQL (`settings` table).
-- Admin configuration form: portal name, max resume upload size (MB), registration toggle, maintenance mode, and support email.
-- Real-time updates with immediate effect and confirmation alert banners.
-- Managed by `SettingsDAO` and `SettingsServlet`.
-
-### 3. Complete Profile Management
-- Full applicant profile editing: Name, Email, Phone, Technical Skills, and Default Resume Upload.
-- Download preview of stored resume.
-- Skills automatically parsed into badges for live AI recommendation matching.
-- Managed by `ProfileServlet` and `UserService`.
-
-### 4. Algorithmic Job Recommendations
-- Candidate skills tokenized and matched against job requirements.
-- Match scores calculated by overlap and sorted using `Comparator<JobRecommendation>`.
-
-### 5. Multi-Criteria Search & Pagination
-- Filter jobs by keyword, location, job type, and salary range.
-- SQL `LIMIT` and `OFFSET` pagination query.
-
----
-
-## 🔑 Demo Credentials
-
-| Role | Email | Password | Permissions |
-|---|---|---|---|
-| **Admin** | `admin@portal.com` | `admin123` | System oversight, user moderation, settings, audit logs |
-| **Employer** | `employer@techcorp.com` | `employer123` | Post jobs, review candidates, download resumes, message candidates |
-| **Job Seeker** | `seeker@example.com` | `seeker123` | Search jobs, apply with resume, manage profile, chat with employers |
-| **Job Seeker 2** | `priya@example.com` | `priya123` | Additional candidate profile for testing |
-
-*(The login page includes quick 1-click credential filler buttons for rapid evaluator demonstrations).*
-
----
-
-## 💻 Installation & Database Setup
-
-### Prerequisites
-- **JDK 17** or higher
-- **Maven 3.8+** (or use included `mvnw`)
-- **MySQL 8.0+** (Optional: application automatically uses concurrent in-memory fallback if MySQL is offline)
-
-### 1. Database Setup (MySQL)
-Run the script in `src/main/resources/schema.sql` inside your MySQL client:
-```sql
-SOURCE src/main/resources/schema.sql;
+The project includes **41 automated tests** across 8 test classes verifying security, polymorphism, JDBC transactions, and core business rules:
+```bash
+./mvnw test
 ```
-
-### 2. Configure Credentials (Optional)
-If your MySQL credentials differ from `root` with no password, define environment variables:
-```powershell
-$env:DB_URL="jdbc:mysql://localhost:3306/online_job_portal"
-$env:DB_USERNAME="your_username"
-$env:DB_PASSWORD="your_password"
-```
-
-### 3. Build & Run Application
-```powershell
-# Clean build and package
-.\mvnw.cmd clean package
-
-# Run development server
-.\mvnw.cmd spring-boot:run
-```
-
-Open your browser to:
-👉 **`http://localhost:8080`**
+All 41 tests execute cleanly with `BUILD SUCCESS`:
+1. `ApplicationDAOTest`: JDBC ACID transaction commit and rollback verification.
+2. `JobDAOTest`: CRUD persistence operations.
+3. `UserDAOTest`: User repository tests.
+4. `UserHierarchyPolymorphismTest`: Inheritance and polymorphic dashboard dispatch.
+5. `JobServiceTest`: Job filtering and business rules.
+6. `JobPortalCoreFeaturesTest`: Application workflow, withdrawal, status timeline, and recommendations.
+7. `SecurityAndRequestAuditTest`: RBAC authorization, CSRF protection, password hashing, and security headers.
+8. `OnlineJobPortalApplicationTests`: Spring Boot application context load.
 
 ---
 
-## 🧪 Testing & Verification
-
-The suite contains **18 unit and integration tests** testing all rubric criteria:
-
-```powershell
-.\mvnw.cmd test
-```
-
-### Test Breakdown:
-- **`UserHierarchyPolymorphismTest`**: Verifies abstract `User` class inheritance, polymorphism, and state encapsulation.
-- **`JobPortalCoreFeaturesTest`**: Verifies `ValidationUtil`, algorithmic recommendations via `Comparator`, duplicate application prevention, status history timeline, soft delete, paginated search, salted hashing, messaging, settings, and synchronization.
-- **`JobServiceTest`**: Validates job posting, retrieval, and status management.
-- **`UserDAOTest`**: Validates user persistence and retrieval.
-- **`JobDAOTest`**: Validates job database CRUD operations.
-- **`ApplicationDAOTest`**: Validates application database operations.
-- **`OnlineJobPortalApplicationTests`**: Validates Spring Boot container initialization.
-
----
-
-## 📊 Rubric & Viva Marking Guide (Target: 33/33)
-
-| Criterion | Marks | Implementation in Codebase |
-|---|---|---|
-| **Problem Understanding & Design** | **8 / 8** | Complete User hierarchy (`Admin`, `Employer`, `JobSeeker`), real Candidate Messaging (`MessageService`, `MessageServlet`), System Settings (`SettingsDAO`, `SettingsServlet`), and complete Profile Management (`ProfileServlet`). |
-| **Core Java Concepts** | **10 / 10** | Abstract classes & polymorphism (`UserHierarchyPolymorphismTest`), generic `DAO<T>`, custom exceptions (`ApplicationException`), `Comparator` sorting, `ExecutorService`, `BlockingQueue`, `AtomicInteger`, `ConcurrentHashMap`, and `synchronized` keyword. |
-| **JDBC** | **8 / 8** | Parameterized `PreparedStatement` on all DAOs (`UserDAO`, `JobDAO`, `ApplicationDAO`, `SettingsDAO`, `MessageDAO`, `ActivityLogDAO`), transaction safety, connection pooling, and multi-criteria queries with `LIMIT`/`OFFSET`. |
-| **Servlets & Web Integration** | **7 / 7** | Clean Two-Layer separation: Spring MVC handles view rendering (`GET`), Servlets handle mutations (`POST` at `/servlet/*`), `@MultipartConfig` resume upload/download, session management, and `@WebFilter` (`AuthFilter`) RBAC coverage. |
-| **Total** | **33 / 33** | **Exemplary full-score enterprise project.** |
+## 📂 Documentation & Architecture Assets
+* **Entity-Relationship Diagram**: [docs/ER_DIAGRAM.md](docs/ER_DIAGRAM.md)
+* **UML Class Diagram**: [docs/UML_CLASS_DIAGRAM.md](docs/UML_CLASS_DIAGRAM.md)
+* **Postman / Bruno API Collection**: [docs/POSTMAN_COLLECTION.json](docs/POSTMAN_COLLECTION.json)
+* **Application Screenshots**:
+  * [Admin Dashboard & Live Counters](docs/screenshots/admin-dashboard.png)
+  * [Admin Job Moderation & Approval](docs/screenshots/admin-job-moderation.png)
+  * [Employer Dashboard & Vacancy Manager](docs/screenshots/employer-dashboard.png)
+  * [Job Seeker Applications & Timeline](docs/screenshots/jobseeker-applications.png)
+  * [Job Seeker Discovery Dashboard](docs/screenshots/jobseeker-dashboard.png)
+  * [Secure Login Page](docs/screenshots/login-page.png)
+  * [Job Inspection Modal](docs/screenshots/modal-inspection.png)

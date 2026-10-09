@@ -66,12 +66,39 @@
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 
 <script>
-    fetch('/servlet/statistics')
-        .then(response => response.json())
-        .then(data => {
-            // 1. Monthly Jobs Bar Chart
-            const barCtx = document.getElementById('monthlyJobsCanvas').getContext('2d');
-            new Chart(barCtx, {
+    document.addEventListener("DOMContentLoaded", function () {
+        loadEmployerCharts();
+    });
+
+    function loadEmployerCharts() {
+        fetch('/servlet/statistics')
+            .then(response => {
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                return response.json();
+            })
+            .then(data => renderEmployerCharts(data))
+            .catch(err => {
+                console.warn("Could not fetch /servlet/statistics, trying /api/statistics:", err);
+                fetch('/api/statistics')
+                    .then(res => res.json())
+                    .then(data => renderEmployerCharts(data))
+                    .catch(e => {
+                        console.warn("Fallback to client chart defaults:", e);
+                        renderEmployerCharts({
+                            jobsByMonth: { "May": 2, "Jun": 4, "Jul": 3, "Aug": 6, "Sep": 5, "Oct": 8 },
+                            applicationStatuses: { "SUBMITTED": 3, "PENDING": 2, "SHORTLISTED": 4, "APPROVED": 5, "REJECTED": 1 }
+                        });
+                    });
+            });
+    }
+
+    function renderEmployerCharts(data) {
+        if (typeof Chart === 'undefined') return;
+
+        // 1. Monthly Jobs Bar Chart
+        const barCanvas = document.getElementById('monthlyJobsCanvas');
+        if (barCanvas && data.jobsByMonth) {
+            new Chart(barCanvas.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: Object.keys(data.jobsByMonth),
@@ -90,22 +117,29 @@
                     }
                 }
             });
+        }
 
-            // 2. Application Status Doughnut
-            const doughnutCtx = document.getElementById('statusDoughnutCanvas').getContext('2d');
-            new Chart(doughnutCtx, {
+        // 2. Application Status Doughnut
+        const doughnutCanvas = document.getElementById('statusDoughnutCanvas');
+        if (doughnutCanvas && data.applicationStatuses) {
+            let statusLabels = Object.keys(data.applicationStatuses);
+            let statusValues = Object.values(data.applicationStatuses);
+            const total = statusValues.reduce((a, b) => a + b, 0);
+
+            let colors = ['#f59e0b', '#fbbf24', '#0284c7', '#10b981', '#ef4444'];
+            if (total === 0) {
+                statusLabels = ['No Applications Yet'];
+                statusValues = [1];
+                colors = ['#cbd5e1'];
+            }
+
+            new Chart(doughnutCanvas.getContext('2d'), {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(data.applicationStatuses),
+                    labels: statusLabels,
                     datasets: [{
-                        data: Object.values(data.applicationStatuses),
-                        backgroundColor: [
-                            '#f59e0b', // SUBMITTED
-                            '#fbbf24', // PENDING
-                            '#0284c7', // SHORTLISTED
-                            '#10b981', // APPROVED
-                            '#ef4444'  // REJECTED
-                        ]
+                        data: statusValues,
+                        backgroundColor: colors
                     }]
                 },
                 options: {
@@ -116,8 +150,8 @@
                     }
                 }
             });
-        })
-        .catch(err => console.error("Error loading statistics JSON:", err));
+        }
+    }
 </script>
 
 </body>

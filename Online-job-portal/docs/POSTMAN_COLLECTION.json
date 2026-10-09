@@ -1,0 +1,196 @@
+{
+  "info": {
+    "name": "JobSphere Online Job Portal API",
+    "description": "Postman & Bruno Collection for testing JobSphere Online Job Portal endpoints including Servlets, MVC Controllers, and REST feeds.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "email", "value": "admin@portal.com" },
+                { "key": "password", "value": "admin123" }
+              ]
+            },
+            "url": "http://localhost:8080/servlet/login"
+          }
+        },
+        {
+          "name": "Register Candidate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "name", "value": "Jane Candidate" },
+                { "key": "email", "value": "jane@example.com" },
+                { "key": "password", "value": "candidate123" },
+                { "key": "phone", "value": "9876543210" },
+                { "key": "role", "value": "JOB_SEEKER" }
+              ]
+            },
+            "url": "http://localhost:8080/servlet/register"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:8080/servlet/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Servlets & Real-Time Analytics",
+      "item": [
+        {
+          "name": "Get Dashboard Statistics JSON",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/servlet/statistics"
+          }
+        },
+        {
+          "name": "Get Real-Time Activity Logs & Online Users",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/servlet/activities"
+          }
+        },
+        {
+          "name": "Live Search Jobs JSON",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/servlet/jobs?keyword=Java"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employer Operations",
+      "item": [
+        {
+          "name": "Post Job Vacancy",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "title", "value": "Senior Backend Architect" },
+                { "key": "description", "value": "Architect high-throughput microservices using Spring Boot and Kafka." },
+                { "key": "requirements", "value": "Java 17, Spring Boot, Microservices, Docker, Kubernetes" },
+                { "key": "salary", "value": "110000" },
+                { "key": "location", "value": "Bangalore" },
+                { "key": "jobType", "value": "Full Time" }
+              ]
+            },
+            "url": "http://localhost:8080/servlet/jobs"
+          }
+        },
+        {
+          "name": "Update Application Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "action", "value": "updateStatus" },
+                { "key": "applicationId", "value": "1" },
+                { "key": "status", "value": "SHORTLISTED" },
+                { "key": "notes", "value": "Profile matched technical requirements" }
+              ]
+            },
+            "url": "http://localhost:8080/servlet/applications"
+          }
+        },
+        {
+          "name": "Export Candidate Applications CSV",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/employer/applications/export-csv"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Moderation",
+      "item": [
+        {
+          "name": "Approve Job Listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "action", "value": "approve" },
+                { "key": "id", "value": "1" }
+              ]
+            },
+            "url": "http://localhost:8080/admin/jobs/action"
+          }
+        },
+        {
+          "name": "Reject Job Listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "action", "value": "reject" },
+                { "key": "id", "value": "1" }
+              ]
+            },
+            "url": "http://localhost:8080/admin/jobs/action"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Job Seeker Actions",
+      "item": [
+        {
+          "name": "Withdraw Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "applicationId", "value": "1" }
+              ]
+            },
+            "url": "http://localhost:8080/jobseeker/applications/withdraw"
+          }
+        }
+      ]
+    }
+  ]
+}

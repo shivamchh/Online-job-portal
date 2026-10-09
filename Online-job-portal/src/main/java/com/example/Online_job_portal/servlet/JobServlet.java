@@ -28,14 +28,18 @@ public class JobServlet extends HttpServlet {
     @Autowired
     private ActivityLogger activityLogger;
 
+    @Autowired
+    private com.example.Online_job_portal.dao.NotificationDAO notificationDAO;
+
     @Override
     public void init() throws ServletException {
         super.init();
-        if (jobService == null || activityLogger == null) {
+        if (jobService == null || activityLogger == null || notificationDAO == null) {
             var ctx = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
             if (ctx != null) {
                 if (jobService == null) jobService = ctx.getBean(JobService.class);
                 if (activityLogger == null) activityLogger = ctx.getBean(ActivityLogger.class);
+                if (notificationDAO == null) notificationDAO = ctx.getBean(com.example.Online_job_portal.dao.NotificationDAO.class);
             }
         }
     }
@@ -109,7 +113,14 @@ public class JobServlet extends HttpServlet {
                 if (activityLogger != null) {
                     activityLogger.log(employerId, userName, "JOB_APPROVE", "Approved job ID #" + jobId + " (Status: APPROVED)");
                 }
-                resp.sendRedirect(req.getContextPath() + "/admin/jobs?success=" + encode("Job #" + jobId + " approved successfully! Current status: APPROVED"));
+                if (notificationDAO != null) {
+                    jobService.getJobById(jobId).ifPresent(j -> notificationDAO.save(new com.example.Online_job_portal.model.Notification(
+                            j.getEmployerId(),
+                            "🎉 Job #" + jobId + " Approved!",
+                            "Your job posting '" + j.getTitle() + "' has been approved by the platform administrator and is now live.",
+                            false)));
+                }
+                resp.sendRedirect(req.getContextPath() + "/admin/jobs?success=" + encode("🎉 Congratulations! Job #" + jobId + " has been SELECTED & APPROVED successfully! The job listing is now live and published for all candidates to apply."));
                 return;
             }
         }
@@ -123,7 +134,14 @@ public class JobServlet extends HttpServlet {
                 if (activityLogger != null) {
                     activityLogger.log(employerId, userName, "JOB_REJECT", "Rejected job ID #" + jobId + " (Status: REJECTED)");
                 }
-                resp.sendRedirect(req.getContextPath() + "/admin/jobs?success=" + encode("Job #" + jobId + " rejected. Current status: REJECTED"));
+                if (notificationDAO != null) {
+                    jobService.getJobById(jobId).ifPresent(j -> notificationDAO.save(new com.example.Online_job_portal.model.Notification(
+                            j.getEmployerId(),
+                            "❌ Job #" + jobId + " Rejected",
+                            "Your job listing '" + j.getTitle() + "' was reviewed and marked as REJECTED.",
+                            false)));
+                }
+                resp.sendRedirect(req.getContextPath() + "/admin/jobs?rejected=true&jobId=" + jobId + "&message=" + encode("Job #" + jobId + " status has been set to REJECTED. The job listing is closed."));
                 return;
             }
         }

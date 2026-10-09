@@ -31,6 +31,7 @@
                         </div>
 
                         <form method="post" action="/servlet/profile" enctype="multipart/form-data" class="needs-validation" novalidate id="profileForm">
+                            <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                             <div class="mb-3">
                                 <label class="form-label small fw-semibold">Full Name</label>
                                 <div class="input-group">

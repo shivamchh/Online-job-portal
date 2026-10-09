@@ -18,6 +18,17 @@ public class NotificationDAO implements DAO<Notification> {
     private final AtomicInteger idCounter = new AtomicInteger(100);
     private boolean useMemoryStore;
 
+    public NotificationDAO() {
+        seedInitialNotifications();
+    }
+
+    public synchronized void seedInitialNotifications() {
+        if (!notifications.isEmpty()) return;
+        notifications.add(new Notification(1, 105, "🎉 Welcome to JobSphere!", "Your job seeker account is active. Explore verified open job positions and apply today.", false, LocalDateTime.now().minusHours(2)));
+        notifications.add(new Notification(2, 105, "Profile Match Alert", "3 new Java & Spring Boot openings match your profile skills.", false, LocalDateTime.now().minusHours(1)));
+        notifications.add(new Notification(3, 106, "Welcome to JobSphere!", "Your job seeker profile is complete. Check out recommended opportunities.", false, LocalDateTime.now().minusHours(3)));
+    }
+
     @Override
     public void save(Notification notification) {
         if (useMemoryStore) {

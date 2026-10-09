@@ -41,20 +41,49 @@
                     <span th:if="${role == 'JOB_SEEKER'}" class="badge bg-success text-uppercase px-2 py-1">Job Seeker</span>
                 </li>
 
-                <!-- Notifications icon if logged in -->
-                <li th:if="${role == 'JOB_SEEKER' and unreadCount != null and unreadCount > 0}" class="nav-item me-2">
-                    <a href="/jobseeker/dashboard" class="btn btn-outline-warning btn-sm position-relative">
+                <!-- Notifications dropdown in navbar -->
+                <li th:if="${role == 'JOB_SEEKER'}" class="nav-item dropdown me-2">
+                    <a class="btn btn-outline-warning btn-sm position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
                         <i class="bi bi-bell-fill"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" th:text="${unreadCount}">
-                            1
-                        </span>
+                        <span th:if="${unreadCount != null and unreadCount > 0}" 
+                              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                              th:text="${unreadCount}">1</span>
                     </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-2" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                        <li class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom mb-2">
+                            <span class="fw-bold small"><i class="bi bi-bell text-warning me-1"></i> Notifications</span>
+                            <form th:if="${unreadCount != null and unreadCount > 0}" method="post" action="/jobseeker/notifications/mark-all-read" class="d-inline m-0 p-0">
+                                <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
+                                <button type="submit" class="btn btn-link btn-sm text-decoration-none p-0 text-muted" style="font-size: 0.75rem;">Mark read</button>
+                            </form>
+                        </li>
+                        <li th:if="${navNotifications != null and !navNotifications.empty}" th:each="n : ${navNotifications}" class="mb-2">
+                            <div class="p-2 rounded-2" th:classappend="${!n.read ? 'bg-light border-start border-3 border-warning' : 'bg-transparent'}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong class="small text-truncate" style="max-width: 200px;" th:text="${n.title}">Notification Title</strong>
+                                    <span th:if="${!n.read}" class="badge bg-warning text-dark font-monospace" style="font-size: 0.6rem;">NEW</span>
+                                </div>
+                                <p class="text-muted small mb-1 text-truncate" style="max-width: 280px;" th:text="${n.message}">Notification message</p>
+                                <small class="text-secondary" style="font-size: 0.7rem;" th:text="${#temporals.format(n.createdAt, 'MMM dd, HH:mm')}">Date</small>
+                            </div>
+                        </li>
+                        <li th:if="${navNotifications == null or navNotifications.empty}" class="text-center text-muted py-3 small">
+                            <i class="bi bi-bell-slash text-secondary d-block mb-1" style="font-size: 1.5rem;"></i>
+                            No notifications yet
+                        </li>
+                        <li class="border-top pt-2 text-center">
+                            <a href="/jobseeker/dashboard" class="small text-primary text-decoration-none fw-semibold">Go to Seeker Dashboard &rarr;</a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li th:if="${userName != null}" class="nav-item">
-                    <a href="/servlet/logout" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </a>
+                    <form method="post" action="/servlet/logout" class="d-inline m-0 p-0">
+                        <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </button>
+                    </form>
                 </li>
 
                 <!-- If not logged in -->
@@ -175,9 +204,21 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
+    <div th:if="${param.success != null and !#strings.isEmpty(param.success[0])}" class="alert alert-success alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill fs-5 me-2"></i>
+        <div th:text="${param.success[0]}">Success message</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
     <div th:if="${error != null and !error.isEmpty()}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
         <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
         <div th:text="${error}">Error message</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div th:if="${param.error != null and !#strings.isEmpty(param.error[0])}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+        <div th:text="${param.error[0] == 'csrf_expired' ? 'Session security token expired. Please try again.' : param.error[0]}">Error message</div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 </div>

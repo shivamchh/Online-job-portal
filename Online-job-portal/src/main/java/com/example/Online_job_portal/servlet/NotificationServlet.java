@@ -41,12 +41,23 @@ public class NotificationServlet extends HttpServlet {
         HttpSession session = req.getSession(false);
         Object userIdObj = session != null ? session.getAttribute("userId") : null;
 
+        String idStr = req.getParameter("id");
+        if (idStr != null && !idStr.isBlank() && notificationDAO != null) {
+            try {
+                int notifId = Integer.parseInt(idStr);
+                notificationDAO.markAsRead(notifId);
+                resp.sendRedirect(req.getContextPath() + "/jobseeker/dashboard?success=" +
+                        URLEncoder.encode("Notification marked as read.", StandardCharsets.UTF_8));
+                return;
+            } catch (Exception ignored) {}
+        }
+
         if (userIdObj != null && notificationDAO != null) {
             int userId = (Integer) userIdObj;
             notificationDAO.markAllAsRead(userId);
         }
 
         resp.sendRedirect(req.getContextPath() + "/jobseeker/dashboard?success=" +
-                URLEncoder.encode("All notifications marked as read", StandardCharsets.UTF_8));
+                URLEncoder.encode("All notifications marked as read.", StandardCharsets.UTF_8));
     }
 }

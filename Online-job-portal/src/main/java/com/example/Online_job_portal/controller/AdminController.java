@@ -19,10 +19,16 @@ public class AdminController {
 
     private final AdminService adminService;
     private final ActivityLogger activityLogger;
+    private final com.example.Online_job_portal.service.JobService jobService;
+    private final com.example.Online_job_portal.dao.NotificationDAO notificationDAO;
 
-    public AdminController(AdminService adminService, ActivityLogger activityLogger) {
+    public AdminController(AdminService adminService, ActivityLogger activityLogger,
+                           com.example.Online_job_portal.service.JobService jobService,
+                           com.example.Online_job_portal.dao.NotificationDAO notificationDAO) {
         this.adminService = adminService;
         this.activityLogger = activityLogger;
+        this.jobService = jobService;
+        this.notificationDAO = notificationDAO;
     }
 
     @GetMapping("/dashboard")
@@ -41,6 +47,7 @@ public class AdminController {
         model.addAttribute("recentActivities", adminService.getRecentActivities(10));
         model.addAttribute("users", adminService.viewUsers());
         model.addAttribute("jobs", adminService.viewJobs());
+        model.addAttribute("activeSessions", com.example.Online_job_portal.listener.ActiveSessionListener.getActiveSessionCount());
 
         return "admin/dashboard";
     }
@@ -60,11 +67,17 @@ public class AdminController {
     @GetMapping("/jobs")
     public String jobs(@RequestParam(required = false) String success,
                        @RequestParam(required = false) String error,
+                       @RequestParam(required = false) String rejected,
+                       @RequestParam(required = false) String message,
+                       @RequestParam(required = false) Integer jobId,
                        HttpSession session, Model model) {
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("role", session.getAttribute("role"));
         model.addAttribute("success", success);
         model.addAttribute("error", error);
+        model.addAttribute("rejected", rejected);
+        model.addAttribute("message", message);
+        model.addAttribute("jobId", jobId);
         model.addAttribute("jobs", adminService.viewJobs());
         return "admin/jobs";
     }

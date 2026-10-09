@@ -118,4 +118,23 @@ public abstract class User {
     public void setDefaultResumePath(String defaultResumePath) {
         this.defaultResumePath = defaultResumePath;
     }
+
+    public com.example.Online_job_portal.model.enums.Role getRoleEnum() {
+        if (this instanceof Admin) return com.example.Online_job_portal.model.enums.Role.ADMIN;
+        if (this instanceof Employer) return com.example.Online_job_portal.model.enums.Role.EMPLOYER;
+        return com.example.Online_job_portal.model.enums.Role.JOB_SEEKER;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return id == user.id && java.util.Objects.equals(email, user.email);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(id, email);
+    }
 }

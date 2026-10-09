@@ -23,13 +23,19 @@ public class ApplicationServlet extends HttpServlet {
     @Autowired
     private ApplicationService applicationService;
 
+    @Autowired
+    private com.example.Online_job_portal.service.JobService jobService;
+
     @Override
     public void init() throws ServletException {
         super.init();
-        if (applicationService == null) {
-            var ctx = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
-            if (ctx != null) {
+        var ctx = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
+        if (ctx != null) {
+            if (applicationService == null) {
                 applicationService = ctx.getBean(ApplicationService.class);
+            }
+            if (jobService == null) {
+                jobService = ctx.getBean(com.example.Online_job_portal.service.JobService.class);
             }
         }
     }
@@ -56,7 +62,14 @@ public class ApplicationServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         HttpSession session = req.getSession(false);
-        String reviewerName = session != null ? (String) session.getAttribute("userName") : "Employer";
+        if (session == null || session.getAttribute("userId") == null) {
+            resp.sendRedirect(req.getContextPath() + "/login?error=auth_required");
+            return;
+        }
+
+        int userId = (Integer) session.getAttribute("userId");
+        String role = (String) session.getAttribute("role");
+        String reviewerName = (String) session.getAttribute("userName");
 
         String action = req.getParameter("action");
         if ("updateStatus".equalsIgnoreCase(action)) {
@@ -67,11 +80,42 @@ public class ApplicationServlet extends HttpServlet {
             if (appIdStr != null && newStatus != null && applicationService != null) {
                 try {
                     int appId = Integer.parseInt(appIdStr);
-                    applicationService.updateApplicationStatus(appId, newStatus, notes, reviewerName);
-                    resp.sendRedirect(req.getContextPath() + "/employer/applications?success=" + encode("Application #" + appId + " updated to " + newStatus));
+                    if ("ADMIN".equalsIgnoreCase(role)) {
+                        applicationService.updateApplicationStatus(appId, newStatus, notes, reviewerName);
+                    } else if ("EMPLOYER".equalsIgnoreCase(role) && jobService != null) {
+                        applicationService.updateApplicationStatusByEmployer(appId, userId, newStatus, notes, reviewerName, jobService);
+                    } else {
+                        resp.sendRedirect(req.getContextPath() + "/access-denied");
+                        return;
+                    }
+                    if ("APPROVED".equalsIgnoreCase(newStatus) || "SHORTLISTED".equalsIgnoreCase(newStatus)) {
+                        resp.sendRedirect(req.getContextPath() + "/employer/applications?success=" + encode("🎉 Congratulations! Candidate Application #" + appId + " has been SELECTED (" + newStatus + ") successfully!"));
+                    } else if ("REJECTED".equalsIgnoreCase(newStatus)) {
+                        resp.sendRedirect(req.getContextPath() + "/employer/applications?success=" + encode("Candidate Application #" + appId + " status marked as REJECTED."));
+                    } else {
+                        resp.sendRedirect(req.getContextPath() + "/employer/applications?success=" + encode("Application #" + appId + " updated to " + newStatus));
+                    }
+                    return;
+                } catch (SecurityException e) {
+                    resp.sendRedirect(req.getContextPath() + "/employer/applications?error=" + encode("Access Denied: You cannot update another employer's application"));
                     return;
                 } catch (Exception e) {
                     resp.sendRedirect(req.getContextPath() + "/employer/applications?error=" + encode(e.getMessage()));
+                    return;
+                }
+            }
+        }
+
+        if ("withdraw".equalsIgnoreCase(action)) {
+            String appIdStr = req.getParameter("applicationId");
+            if (appIdStr != null && applicationService != null) {
+                try {
+                    int appId = Integer.parseInt(appIdStr);
+                    applicationService.withdrawApplication(appId, userId);
+                    resp.sendRedirect(req.getContextPath() + "/jobseeker/applications?success=" + encode("Application #" + appId + " has been withdrawn successfully."));
+                    return;
+                } catch (Exception e) {
+                    resp.sendRedirect(req.getContextPath() + "/jobseeker/applications?error=" + encode(e.getMessage()));
                     return;
                 }
             }

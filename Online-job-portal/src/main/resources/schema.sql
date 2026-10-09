@@ -91,5 +91,18 @@ INSERT IGNORE INTO settings (key_name, key_value, description) VALUES
 ('portal_name', 'Online Job Portal', 'Display title of the portal'),
 ('max_resume_size_mb', '2', 'Maximum allowable resume size in Megabytes'),
 ('registration_open', 'true', 'Whether new candidate registration is enabled'),
+('admin_access_key', 'ADMIN@ACCESS@2026', 'Owner authorization key required to register an Admin account'),
+('require_account_approval', 'false', 'Whether new accounts require owner approval before login'),
 ('maintenance_mode', 'false', 'Portal maintenance lock'),
 ('contact_email', 'support@jobportal.com', 'System administrator contact email');
+
+-- ============================================================================
+-- PERFORMANCE & FOREIGN KEY INDEXES (JDBC Optimization Rubric)
+-- ============================================================================
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_jobs_status ON jobs(status);
+CREATE INDEX idx_jobs_employer ON jobs(employer_id);
+CREATE INDEX idx_applications_job ON applications(job_id);
+CREATE INDEX idx_applications_seeker ON applications(job_seeker_id);
+CREATE INDEX idx_notifications_user ON notifications(user_id);
+

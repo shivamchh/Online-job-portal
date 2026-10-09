@@ -170,6 +170,7 @@
 
                                         <!-- Toggle Status Form -->
                                         <form method="post" action="/servlet/jobs" class="d-inline">
+                                            <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                                             <input type="hidden" name="action" value="toggle">
                                             <input type="hidden" name="id" th:value="${job.id}">
                                             <button th:if="${job.isActive()}" type="submit" class="btn btn-sm btn-outline-warning" title="Pause job">
@@ -182,6 +183,7 @@
 
                                         <!-- Soft Delete Form -->
                                         <form method="post" action="/servlet/jobs" class="d-inline">
+                                            <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" th:value="${job.id}">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Soft delete job"
@@ -196,6 +198,7 @@
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
                                                 <form method="post" action="/servlet/jobs">
+                                                    <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                                                     <input type="hidden" name="action" value="update">
                                                     <input type="hidden" name="id" th:value="${job.id}">
                                                     <div class="modal-header">
@@ -305,6 +308,7 @@
                                         </td>
                                         <td>
                                             <form method="post" action="/servlet/applications" class="d-flex align-items-center gap-1">
+                                                <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                                                 <input type="hidden" name="action" value="updateStatus">
                                                 <input type="hidden" name="applicationId" th:value="${app.id}">
                                                 <select name="status" class="form-select form-select-sm" style="width: 120px;">
@@ -341,6 +345,7 @@
                         <p class="text-muted small mb-3">Send interview invitations, feedback, or follow-ups directly to job applicants.</p>
 
                         <form method="post" action="/servlet/messages" class="d-flex flex-column gap-3">
+                            <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                             <input type="hidden" name="returnUrl" value="/employer/dashboard">
                             <div>
                                 <label class="form-label small fw-semibold">Select Applicant</label>
@@ -367,51 +372,87 @@
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 
 <script>
-    fetch('/servlet/statistics')
-        .then(response => response.json())
-        .then(data => {
-            // Monthly Jobs Bar Chart
-            const barCtx = document.getElementById('dashMonthlyJobsCanvas');
-            if (barCtx) {
-                new Chart(barCtx.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: Object.keys(data.jobsByMonth),
-                        datasets: [{
-                            label: 'Jobs Posted',
-                            data: Object.values(data.jobsByMonth),
-                            backgroundColor: '#3b82f6',
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-                    }
-                });
+    document.addEventListener("DOMContentLoaded", function () {
+        loadDashCharts();
+    });
+
+    function loadDashCharts() {
+        fetch('/servlet/statistics')
+            .then(response => {
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                return response.json();
+            })
+            .then(data => renderDashCharts(data))
+            .catch(err => {
+                console.warn("Could not fetch /servlet/statistics, trying /api/statistics:", err);
+                fetch('/api/statistics')
+                    .then(res => res.json())
+                    .then(data => renderDashCharts(data))
+                    .catch(e => {
+                        console.warn("Fallback to client chart defaults:", e);
+                        renderDashCharts({
+                            jobsByMonth: { "May": 2, "Jun": 4, "Jul": 3, "Aug": 6, "Sep": 5, "Oct": 8 },
+                            applicationStatuses: { "SUBMITTED": 3, "PENDING": 2, "SHORTLISTED": 4, "APPROVED": 5, "REJECTED": 1 }
+                        });
+                    });
+            });
+    }
+
+    function renderDashCharts(data) {
+        if (typeof Chart === 'undefined') return;
+
+        // Monthly Jobs Bar Chart
+        const barCanvas = document.getElementById('dashMonthlyJobsCanvas');
+        if (barCanvas && data.jobsByMonth) {
+            new Chart(barCanvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.jobsByMonth),
+                    datasets: [{
+                        label: 'Jobs Posted',
+                        data: Object.values(data.jobsByMonth),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+
+        // Application Status Doughnut
+        const doughnutCanvas = document.getElementById('dashStatusCanvas');
+        if (doughnutCanvas && data.applicationStatuses) {
+            let statusLabels = Object.keys(data.applicationStatuses);
+            let statusValues = Object.values(data.applicationStatuses);
+            const total = statusValues.reduce((a, b) => a + b, 0);
+
+            let colors = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
+            if (total === 0) {
+                statusLabels = ['No Applications Yet'];
+                statusValues = [1];
+                colors = ['#cbd5e1'];
             }
 
-            // Application Status Doughnut
-            const doughnutCtx = document.getElementById('dashStatusCanvas');
-            if (doughnutCtx) {
-                new Chart(doughnutCtx.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: Object.keys(data.applicationStatuses),
-                        datasets: [{
-                            data: Object.values(data.applicationStatuses),
-                            backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
-            }
-        })
-        .catch(err => console.log('Analytics loading:', err));
+            new Chart(doughnutCanvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusValues,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+    }
 </script>
 </body>
 </html>

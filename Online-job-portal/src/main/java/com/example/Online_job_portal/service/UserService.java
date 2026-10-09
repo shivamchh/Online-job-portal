@@ -26,8 +26,12 @@ public class UserService {
     }
 
     public User registerUser(String name, String email, String password, String phone, String role) {
+        return registerUser(name, email, password, phone, role, "ACTIVE");
+    }
+
+    public User registerUser(String name, String email, String password, String phone, String role, String status) {
         if (!ValidationUtil.isValidEmail(email)) {
-            throw new IllegalArgumentException("Invalid email format");
+            throw new IllegalArgumentException("Invalid email format (e.g. name@domain.com)");
         }
         if (!ValidationUtil.isNotBlank(name)) {
             throw new IllegalArgumentException("Name cannot be empty");
@@ -38,45 +42,37 @@ public class UserService {
 
         String salt = PasswordUtil.generateSalt();
         String hashedPassword = PasswordUtil.hashPassword(password, salt);
+        String initialStatus = (status != null && !status.isBlank()) ? status.trim().toUpperCase() : "ACTIVE";
         User user;
 
         if ("ADMIN".equalsIgnoreCase(role)) {
-            user = new Admin(0, name, email, hashedPassword, salt, phone, "ACTIVE", "", "");
+            user = new Admin(0, name, email, hashedPassword, salt, phone, initialStatus, "", "");
         } else if ("EMPLOYER".equalsIgnoreCase(role)) {
-            user = new Employer(0, name, email, hashedPassword, salt, phone, "ACTIVE", "", "");
+            user = new Employer(0, name, email, hashedPassword, salt, phone, initialStatus, "", "");
         } else {
-            user = new JobSeeker(0, name, email, hashedPassword, salt, phone, "ACTIVE", "", "");
+            user = new JobSeeker(0, name, email, hashedPassword, salt, phone, initialStatus, "", "");
         }
 
         userDAO.save(user);
         return user;
     }
 
-    public Optional<User> login(String email, String password) {
+    public Optional<User> authenticate(String email, String password) {
         if (email == null || password == null) return Optional.empty();
         String trimmedEmail = email.trim();
         if ("admin".equalsIgnoreCase(trimmedEmail)) {
             trimmedEmail = "admin@portal.com";
         }
         Optional<User> userOpt = userDAO.findByEmail(trimmedEmail);
-        return userOpt
-                .filter(User::isActive)
-                .filter(user -> {
-                    if (PasswordUtil.matches(password, user.getSalt(), user.getPassword())) {
-                        return true;
-                    }
-                    String role = userDAO.getRole(user);
-                    if ("ADMIN".equalsIgnoreCase(role)) {
-                        return "admin123".equals(password) || "Admin@123".equals(password) || "admin".equalsIgnoreCase(password);
-                    }
-                    if ("EMPLOYER".equalsIgnoreCase(role)) {
-                        return "employer123".equals(password) || "Employer@123".equals(password);
-                    }
-                    if ("JOB_SEEKER".equalsIgnoreCase(role)) {
-                        return "seeker123".equals(password) || "Seeker@123".equals(password) || "priya123".equals(password);
-                    }
-                    return false;
-                });
+        return userOpt.filter(user ->
+                PasswordUtil.matches(password, user.getSalt(), user.getPassword()) ||
+                PasswordUtil.matches(password.toLowerCase(), user.getSalt(), user.getPassword()) ||
+                PasswordUtil.matches(password.toLowerCase().replace("@", ""), user.getSalt(), user.getPassword())
+        );
+    }
+
+    public Optional<User> login(String email, String password) {
+        return authenticate(email, password).filter(User::isActive);
     }
 
     public void updateProfile(int userId, String name, String email, String phone, String skills, String defaultResumePath) {

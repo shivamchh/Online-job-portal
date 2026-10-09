@@ -15,6 +15,11 @@
                     <h2 class="fw-bold mb-1">Candidate Pipeline & Resumes</h2>
                     <p class="text-muted small mb-0">Review candidate submissions, download resumes, and manage applicant status updates.</p>
                 </div>
+                <div>
+                    <a href="/employer/applications/export-csv" class="btn btn-outline-success btn-sm shadow-sm">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+                    </a>
+                </div>
             </div>
 
             <div th:replace="~{fragments/layout :: flashMessages}"></div>
@@ -63,6 +68,7 @@
                                 <td class="small text-muted" th:text="${app.appliedDate}">2026-10-01</td>
                                 <td>
                                     <form method="post" action="/servlet/applications" class="d-flex align-items-center gap-2">
+                                        <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN != null ? session.CSRF_TOKEN : _csrf}">
                                         <input type="hidden" name="action" value="updateStatus">
                                         <input type="hidden" name="applicationId" th:value="${app.id}">
                                         <select name="status" class="form-select form-select-sm" style="width: 140px;">
