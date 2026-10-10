@@ -25,7 +25,24 @@ target/
 .DS_Store
 Thumbs.db
 
-# Logs & Environment
+# Logs & Runtime files
 *.log
-.env
+**/*.log
+runtime-check.*
+
+# User uploads and candidate personal data
+uploads/
+**/uploads/
 uploads/resumes/
+
+# Secrets, API keys, and environment overrides
+.env
+.env.*
+*.env
+**/.env*
+application-local.properties
+**/application-local.properties
+*.pem
+*.key
+*.secret
+*.credentials
