@@ -62,3 +62,8 @@ Thumbs.db
 
 # User uploads and runtime files
 uploads/
+
+# Secrets and environment overrides
+.env
+*.env
+application-local.properties

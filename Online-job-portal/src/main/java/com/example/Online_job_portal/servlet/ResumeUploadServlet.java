@@ -127,12 +127,9 @@ public class ResumeUploadServlet extends HttpServlet {
             }
         }
 
-        // Store file safely outside webapp public paths
-        String uploadDir = System.getProperty("user.dir") + File.separator + "uploads" + File.separator + "resumes";
+        // Store file safely outside webapp public paths using configurable upload directory
+        String uploadDir = ValidationUtil.getResumeUploadDirectory();
         File dir = new File(uploadDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
 
         String safeFilename = UUID.randomUUID().toString().substring(0, 8) + "_" + submittedFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
         File destFile = new File(dir, safeFilename);

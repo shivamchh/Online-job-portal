@@ -52,6 +52,10 @@ public class CsrfFilter implements Filter {
 
         String method = req.getMethod();
         String path = req.getRequestURI().substring(req.getContextPath().length());
+        int semicolon = path.indexOf(';');
+        if (semicolon != -1) {
+            path = path.substring(0, semicolon);
+        }
 
         // Validate state-changing methods
         if (isStateChanging(method) && !isExempt(path)) {
@@ -90,6 +94,6 @@ public class CsrfFilter implements Filter {
     }
 
     private boolean isExempt(String path) {
-        return EXEMPT_ENDPOINTS.contains(path);
+        return EXEMPT_ENDPOINTS.contains(path) || path.startsWith("/actuator");
     }
 }

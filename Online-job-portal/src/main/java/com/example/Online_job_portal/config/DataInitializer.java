@@ -29,21 +29,31 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String seedDemo = System.getenv("SEED_DEMO_DATA");
-        if (seedDemo == null) {
-            seedDemo = System.getProperty("SEED_DEMO_DATA", "true");
+        boolean fallbackAllowed = DBConnection.isFallbackAllowed();
+        if (!fallbackAllowed && !DBConnection.isAvailable()) {
+            throw new IllegalStateException("CRITICAL: Production database is unreachable and in-memory fallback is disabled (app.db.fallback=false). Verify DB_URL, DB_USERNAME, and DB_PASSWORD environment variables.");
         }
 
-        if (!"false".equalsIgnoreCase(seedDemo)) {
+        String env = System.getenv("SPRING_PROFILES_ACTIVE");
+        if (env == null) env = System.getProperty("spring.profiles.active", "default");
+        boolean isProd = "prod".equalsIgnoreCase(env) || "production".equalsIgnoreCase(env);
+
+        String seedDemoProp = System.getenv("SEED_DEMO_DATA");
+        if (seedDemoProp == null) {
+            seedDemoProp = System.getProperty("app.seed.demo-data", System.getProperty("SEED_DEMO_DATA", isProd ? "false" : "true"));
+        }
+        boolean seedDemo = !"false".equalsIgnoreCase(seedDemoProp) && !isProd;
+
+        if (seedDemo) {
             userDAO.seedInitialUsers();
             jobDAO.seedInitialJobs();
             applicationDAO.seedInitialApplications();
         } else {
-            log.info("SEED_DEMO_DATA is disabled; skipping in-memory demo data seeding.");
+            log.info("Production/No-demo mode active: skipping in-memory demo data seeding.");
         }
 
         if (DBConnection.isAvailable()) {
-            syncMySQLDemoDataset("false".equalsIgnoreCase(seedDemo));
+            syncMySQLDemoDataset(!seedDemo);
         }
     }
 
@@ -139,6 +149,16 @@ public class DataInitializer implements CommandLineRunner {
 
                 seedJobsIfEmpty(conn);
                 seedApplicationsIfEmpty(conn);
+            } else {
+                // In production mode, seed ONLY the administrative owner account if provided via environment variables
+                String envAdminEmail = getEnvOrProp("ADMIN_EMAIL", "");
+                String envAdminPassword = getEnvOrProp("ADMIN_PASSWORD", "");
+                if (!envAdminEmail.isBlank() && !envAdminPassword.isBlank()) {
+                    seedUserIfMissing(conn, "Platform Administrator", envAdminEmail, envAdminPassword, "ADMIN");
+                    log.info("Initialized production administrator account for [{}]", envAdminEmail);
+                } else {
+                    log.info("Production mode: No initial ADMIN_EMAIL/ADMIN_PASSWORD environment variables provided; skipping seed.");
+                }
             }
         } catch (Exception e) {
             log.error("Failed to synchronize MySQL dataset/schema: {}", e.getMessage(), e);

@@ -254,4 +254,31 @@ public class SecurityAndRequestAuditTest {
         assertTrue(session.isInvalid(), "Session must be invalidated on logout");
         assertTrue(resp.getRedirectedUrl().contains("/login?logout=success"));
     }
+
+    @Test
+    @DisplayName("Deployment Readiness: /actuator/health is publicly accessible for cloud health checks")
+    void testActuatorHealthIsPubliclyAccessible() throws Exception {
+        MockHttpServletRequest healthReq = new MockHttpServletRequest("GET", "/actuator/health");
+        MockHttpServletResponse healthResp = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        authFilter.doFilter(healthReq, healthResp, chain);
+        // Must not be redirected to login
+        assertNotEquals(302, healthResp.getStatus(), "Actuator health endpoint must not redirect to login");
+        assertNotEquals(401, healthResp.getStatus(), "Actuator health endpoint must be public for container orchestrators");
+    }
+
+    @Test
+    @DisplayName("Deployment Readiness: CSP allows Bootstrap, DataTables, and jQuery CDNs")
+    void testCspAllowsRequiredCdns() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/");
+        MockHttpServletResponse resp = new MockHttpServletResponse();
+        securityHeadersFilter.doFilter(req, resp, new MockFilterChain());
+
+        String csp = resp.getHeader("Content-Security-Policy");
+        assertNotNull(csp);
+        assertTrue(csp.contains("https://cdn.jsdelivr.net"), "CSP must permit jsdelivr (Bootstrap/Chart.js)");
+        assertTrue(csp.contains("https://code.jquery.com"), "CSP must permit code.jquery.com (jQuery)");
+        assertTrue(csp.contains("https://cdn.datatables.net"), "CSP must permit cdn.datatables.net (DataTables)");
+    }
 }

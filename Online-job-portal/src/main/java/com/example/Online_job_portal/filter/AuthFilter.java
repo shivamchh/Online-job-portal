@@ -20,7 +20,8 @@ public class AuthFilter implements Filter {
             "/css/",
             "/js/",
             "/images/",
-            "/favicon.ico"
+            "/favicon.ico",
+            "/actuator/"
     );
 
     private static final Set<String> PUBLIC_EXACT = Set.of(
@@ -50,6 +51,10 @@ public class AuthFilter implements Filter {
         HttpServletResponse resp = (HttpServletResponse) response;
 
         String path = req.getRequestURI().substring(req.getContextPath().length());
+        int semicolon = path.indexOf(';');
+        if (semicolon != -1) {
+            path = path.substring(0, semicolon);
+        }
 
         // Allow public static assets and exact public endpoints
         if (isPublic(path)) {

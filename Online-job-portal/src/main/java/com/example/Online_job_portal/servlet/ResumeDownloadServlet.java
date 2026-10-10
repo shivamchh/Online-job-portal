@@ -72,7 +72,7 @@ public class ResumeDownloadServlet extends HttpServlet {
             return;
         }
 
-        String uploadDir = System.getProperty("user.dir") + File.separator + "uploads" + File.separator + "resumes";
+        String uploadDir = com.example.Online_job_portal.util.ValidationUtil.getResumeUploadDirectory();
         File file = new File(uploadDir, safeName);
 
         if (!file.exists() || !file.isFile()) {

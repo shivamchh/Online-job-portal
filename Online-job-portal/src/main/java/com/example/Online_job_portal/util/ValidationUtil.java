@@ -77,4 +77,23 @@ public final class ValidationUtil {
     public static boolean isValidResumeSize(long sizeInBytes) {
         return sizeInBytes > 0 && sizeInBytes <= MAX_RESUME_SIZE;
     }
+
+    /**
+     * Resolves the persistent resume upload directory across local and cloud environments.
+     * Reads UPLOAD_DIR environment variable or app.upload.dir system property.
+     */
+    public static String getResumeUploadDirectory() {
+        String customDir = System.getenv("UPLOAD_DIR");
+        if (customDir == null || customDir.isBlank()) {
+            customDir = System.getProperty("app.upload.dir");
+        }
+        if (customDir == null || customDir.isBlank()) {
+            customDir = System.getProperty("user.dir") + java.io.File.separator + "uploads";
+        }
+        java.io.File resumeDir = new java.io.File(customDir, "resumes");
+        if (!resumeDir.exists()) {
+            resumeDir.mkdirs();
+        }
+        return resumeDir.getAbsolutePath();
+    }
 }

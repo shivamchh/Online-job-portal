@@ -2,7 +2,7 @@
 
 [![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Build Status](https://img.shields.io/badge/Tests-41%20Passed-success.svg)]()
+[![Build Status](https://img.shields.io/badge/Tests-43%20Passed-success.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
 
 **JobSphere** is a high-performance recruitment and job search web platform built with **Java 17, Spring Boot 3, Java Servlets, JDBC, and Thymeleaf**. It follows enterprise design patterns, multi-layer security countermeasures, thread-safe asynchronous concurrency models, and an academic evaluation rubric covering Core Java, JDBC transactions, Java Servlets, and Object-Oriented Programming.
@@ -15,7 +15,7 @@
 | :--- | :---: | :--- |
 | **Problem Understanding & Solution Design** | **8 Marks** | Complete end-to-end recruitment lifecycle: employer job postings, deadline filters, applicant review, secure resume download, multi-step application status pipeline, direct messaging, live platform activity stream, and visual Chart.js analytics. |
 | **Core Java & OOP Implementation** | **10 Marks** | • **Inheritance & Polymorphism**: Abstract base class `User` extended by `Admin`, `Employer`, and `JobSeeker`, each implementing specialized polymorphic behaviors like `showDashboard()`.<br>• **Strongly-Typed Enums**: Domain-specific enums `Role`, `JobStatus` (segregated moderation vs lifecycle), and `ApplicationStatus`.<br>• **Interfaces & Generics**: Generic repository interface `DAO<T>` and `JobOperations`.<br>• **Collections & Comparable**: `Job implements Comparable<Job>` for natural ordering by creation date; skill-matching engine using `Set<String>`, `Map`, and custom score `Comparator`.<br>• **Checked Exceptions**: Custom checked exceptions `ApplicationException`, `JobNotFoundException`, `UserNotFoundException` (all extend `Exception`).<br>• **Multithreading & Concurrency**: `ActivityLogger` using Producer-Consumer pattern with `LinkedBlockingQueue` and dedicated background worker thread; `ThreadManager` with `ExecutorService`, `ScheduledExecutorService`, and `Callable`/`Future` tasks. |
-| **Database Integration (JDBC)** | **8 Marks** | • **ACID Transactions**: Atomic 3-step operations with `connection.setAutoCommit(false)`, `connection.commit()`, and `connection.rollback()` in `ApplicationDAO.saveWithTransaction()` / `executeTransaction()`.<br>• **Batch Inserts**: `addBatch()` and `executeBatch()` for seeding initial records in `DataInitializer`.<br>• **Performance Indexes**: High-performance indexes on `users(email)`, `jobs(status)`, `jobs(employer_id)`, and `applications(job_id)` in `schema.sql`.<br>• **PreparedStatement Security**: 100% parameterized queries guarding against SQL injection; automatic fallback memory mode for zero-downtime offline evaluation. |
+| **Database Integration (JDBC)** | **8 Marks** | • **ACID Transactions**: Atomic 3-step operations with `connection.setAutoCommit(false)`, `connection.commit()`, and `connection.rollback()` in `ApplicationDAO.saveWithTransaction()` / `executeTransaction()`.<br>• **HikariCP Connection Pool**: High-performance `HikariDataSource` configured in `DBConnection` with 10 max connections, 3-second connection timeouts, and automatic fallback safeguards.<br>• **Batch Inserts**: `addBatch()` and `executeBatch()` for seeding initial records in `DataInitializer`.<br>• **Performance Indexes**: High-performance indexes on `users(email)`, `jobs(status)`, `jobs(employer_id)`, and `applications(job_id)` in `schema.sql`.<br>• **PreparedStatement Security**: 100% parameterized queries guarding against SQL injection; configurable fallback memory mode for zero-downtime offline evaluation. |
 | **Servlets & Web Integration** | **7 Marks** | • **Two-Layer Architecture**: Strict separation between GET presentation (`@Controller` classes) and state-mutating actions (POST handled by 13 dedicated `@WebServlet` classes under `/servlet/*`).<br>• **Ordered Filter Chain**: (0) `RequestLoggingFilter` -> (1) `SecurityHeadersFilter` -> (2) `AuthFilter` -> (3) `CsrfFilter` covering `/*` and `/servlet/*`.<br>• **Web Listeners**: `ActiveSessionListener` (`HttpSessionListener` tracking live users online in `listener/`), `AppContextListener` (`ServletContextListener` lifecycle cleanup in `listener/`).<br>• **Session Fixation Countermeasure**: `request.changeSessionId()` called immediately upon authenticated login.<br>• **Live Charts**: Real-time Chart.js visual analytics fed dynamically via `StatisticsServlet`. |
 
 ---
@@ -98,19 +98,93 @@ The application will be accessible at: **`http://localhost:8080`**
 
 ## 🧪 Automated Testing
 
-The project includes **41 automated tests** across 8 test classes verifying security, polymorphism, JDBC transactions, and core business rules:
+The project includes **43 automated tests** across 8 test classes verifying security, polymorphism, JDBC transactions, and core business rules:
 ```bash
 ./mvnw test
 ```
-All 41 tests execute cleanly with `BUILD SUCCESS`:
+All 43 tests execute cleanly with `BUILD SUCCESS`:
 1. `ApplicationDAOTest`: JDBC ACID transaction commit and rollback verification.
 2. `JobDAOTest`: CRUD persistence operations.
 3. `UserDAOTest`: User repository tests.
 4. `UserHierarchyPolymorphismTest`: Inheritance and polymorphic dashboard dispatch.
 5. `JobServiceTest`: Job filtering and business rules.
 6. `JobPortalCoreFeaturesTest`: Application workflow, withdrawal, status timeline, and recommendations.
-7. `SecurityAndRequestAuditTest`: RBAC authorization, CSRF protection, password hashing, and security headers.
+7. `SecurityAndRequestAuditTest`: RBAC authorization, CSRF protection, password hashing, security headers, unauthenticated Actuator health check access, and CDN CSP whitelisting.
 8. `OnlineJobPortalApplicationTests`: Spring Boot application context load.
+
+---
+
+## 🌐 Deployment & Multi-Device Access Guide
+
+JobSphere is engineered for local development, multi-device LAN testing (Wi-Fi), and production cloud containerization (Render, Railway, Fly.io, AWS ECS).
+
+### 1. Multi-Device Local Testing (Same Wi-Fi / Phone / Second Laptop)
+To access the application from your smartphone or another computer on the same Wi-Fi network:
+1. Find your computer's local IP address:
+   * **Windows**: Open Command Prompt / PowerShell and run `ipconfig`. Look for **IPv4 Address** (e.g., `192.168.1.5`).
+   * **Linux/macOS**: Run `ifconfig` or `ip a`.
+2. Start JobSphere:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+3. Open a browser on your phone or connected device and navigate to:
+   ```text
+   http://<YOUR_IPV4_ADDRESS>:8080    (e.g., http://192.168.1.5:8080)
+   ```
+   *Note: If the page does not load, allow inbound connections for port 8080 in Windows Defender Firewall.*
+
+---
+
+### 2. Temporary Public Access (Cloudflare Tunnel / ngrok)
+For viva presentations or remote demonstrations without cloud hosting:
+1. Install [Cloudflare Tunnel (`cloudflared`)](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) or `ngrok`.
+2. Run:
+   ```bash
+   cloudflared tunnel --url http://localhost:8080
+   ```
+3. Share the generated temporary `https://<tunnel-subdomain>.trycloudflare.com` URL with evaluators.
+
+---
+
+### 3. Production Cloud & Docker Deployment
+JobSphere includes an optimized multi-stage `Dockerfile` and production configuration profile (`application-prod.properties`).
+
+#### Environment Variables Reference
+Configure these variables in your cloud hosting provider (Render, Railway, Fly.io, Docker):
+
+| Environment Variable | Default Value | Production Description |
+| :--- | :--- | :--- |
+| `PORT` | `8080` | Web server listening port (dynamically injected by cloud hosts). |
+| `SPRING_PROFILES_ACTIVE` | `default` | Set to `prod` to activate strict production mode. |
+| `DB_URL` | `jdbc:mysql://localhost:3306/job_portal?...` | Production MySQL JDBC connection URL. |
+| `DB_USERNAME` | `root` | Production MySQL database username. |
+| `DB_PASSWORD` | *(empty)* | Production MySQL database password. |
+| `APP_DB_FALLBACK` | `true` (false in prod) | Disallow in-memory fallback to avoid silent data loss if MySQL drops. |
+| `UPLOAD_DIR` | `uploads` | Persistent directory path for uploaded candidate PDF/DOCX resumes. |
+| `ADMIN_EMAIL` | *(optional)* | Custom administrator email created securely on first boot. |
+| `ADMIN_PASSWORD` | *(optional)* | Custom administrator password created securely on first boot. |
+
+#### Build & Run with Docker
+```bash
+# Build production Docker image
+docker build -t jobsphere:latest .
+
+# Run container with production database
+docker run -d \
+  -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_URL="jdbc:mysql://host.docker.internal:3306/job_portal?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+  -e DB_USERNAME="root" \
+  -e DB_PASSWORD="your_password" \
+  -e UPLOAD_DIR="/app/uploads" \
+  -v jobsphere_uploads:/app/uploads \
+  jobsphere:latest
+```
+
+#### Health Probes & Monitoring
+Cloud health checks probe the following unauthenticated endpoint:
+* **Health Check**: `GET /actuator/health` -> returns `{"status":"UP"}` with HTTP `200 OK`.
+* Auth filters and CSRF verification explicitly whitelist `/actuator/*` to prevent container restart loops.
 
 ---
 

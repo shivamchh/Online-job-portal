@@ -20,10 +20,11 @@ public class SecurityHeadersFilter implements Filter {
             resp.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
             resp.setHeader("Content-Security-Policy",
                     "default-src 'self'; " +
-                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-                    "font-src 'self' https://cdn.jsdelivr.net; " +
-                    "img-src 'self' data:; " +
+                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.datatables.net; " +
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.datatables.net; " +
+                    "font-src 'self' https://cdn.jsdelivr.net data:; " +
+                    "img-src 'self' data: https:; " +
+                    "connect-src 'self'; " +
                     "frame-ancestors 'none';");
             resp.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
         }

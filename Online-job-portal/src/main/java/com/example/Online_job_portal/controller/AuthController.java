@@ -28,6 +28,17 @@ public class AuthController {
 
     @GetMapping("/")
     public String index(HttpSession session, Model model) {
+        if (session.getAttribute("user") != null) {
+            String role = (String) session.getAttribute("role");
+            if ("ADMIN".equalsIgnoreCase(role)) return "redirect:/admin/dashboard";
+            if ("EMPLOYER".equalsIgnoreCase(role)) return "redirect:/employer/dashboard";
+            if ("JOB_SEEKER".equalsIgnoreCase(role) || "JOBSEEKER".equalsIgnoreCase(role)) return "redirect:/jobseeker/dashboard";
+        }
+        return "redirect:/login";
+    }
+
+    @GetMapping("/home")
+    public String home(HttpSession session, Model model) {
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("role", session.getAttribute("role"));
         return "index";
