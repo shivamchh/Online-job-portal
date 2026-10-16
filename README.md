@@ -269,3 +269,13 @@ The suite contains **18 unit and integration tests** testing all rubric criteria
 | **JDBC** | **8 / 8** | Parameterized `PreparedStatement` on all DAOs (`UserDAO`, `JobDAO`, `ApplicationDAO`, `SettingsDAO`, `MessageDAO`, `ActivityLogDAO`), transaction safety, connection pooling, and multi-criteria queries with `LIMIT`/`OFFSET`. |
 | **Servlets & Web Integration** | **7 / 7** | Clean Two-Layer separation: Spring MVC handles view rendering (`GET`), Servlets handle mutations (`POST` at `/servlet/*`), `@MultipartConfig` resume upload/download, session management, and `@WebFilter` (`AuthFilter`) RBAC coverage. |
 | **Total** | **33 / 33** | **Exemplary full-score enterprise project.** |
+
+---
+
+## 👥 Project Contributors & Team
+
+| Name | Role | Primary Contributions |
+| :--- | :--- | :--- |
+| **Shivam Chh** | Lead Developer | System Architecture, Full-Stack MVC Implementation, Authentication & Database Pipeline |
+| **Saunak Sharma** | Research & Backend Contributor | Architectural Research, Matching Algorithm Formulation, Candidate Analytics Utility & Diagnostics Tooling |
+

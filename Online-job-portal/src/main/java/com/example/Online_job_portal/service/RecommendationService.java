@@ -2,6 +2,7 @@ package com.example.Online_job_portal.service;
 
 import com.example.Online_job_portal.model.Job;
 import com.example.Online_job_portal.model.JobRecommendation;
+import com.example.Online_job_portal.util.CandidateAnalyticsUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -64,11 +65,14 @@ public class RecommendationService {
             }
 
             int score = matchedSkills.size();
+            double matchPercentage = CandidateAnalyticsUtil.calculateMatchPercentage(seekerSkills, job.getRequirements());
+            List<String> missingSkills = CandidateAnalyticsUtil.identifySkillGaps(seekerSkills, job.getRequirements());
+
             String explanation = score > 0
-                    ? score + " matching skills (" + String.join(", ", matchedSkills) + ")"
+                    ? score + " matching skills (" + String.join(", ", matchedSkills) + ") • " + matchPercentage + "% match"
                     : "No specific skill match found";
 
-            recommendations.add(new JobRecommendation(job, score, matchedSkills, explanation));
+            recommendations.add(new JobRecommendation(job, score, matchedSkills, explanation, matchPercentage, missingSkills));
         }
 
         // Sort by match score descending, then by salary descending
