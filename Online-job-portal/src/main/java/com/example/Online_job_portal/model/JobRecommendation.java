@@ -9,6 +9,8 @@ public class JobRecommendation {
     private int matchScore;
     private List<String> matchedSkills = new ArrayList<>();
     private String explanation;
+    private double matchPercentage;
+    private List<String> missingSkills = new ArrayList<>();
 
     public JobRecommendation() {
     }
@@ -18,6 +20,15 @@ public class JobRecommendation {
         this.matchScore = matchScore;
         this.matchedSkills = matchedSkills != null ? matchedSkills : new ArrayList<>();
         this.explanation = explanation;
+    }
+
+    public JobRecommendation(Job job, int matchScore, List<String> matchedSkills, String explanation, double matchPercentage, List<String> missingSkills) {
+        this.job = job;
+        this.matchScore = matchScore;
+        this.matchedSkills = matchedSkills != null ? matchedSkills : new ArrayList<>();
+        this.explanation = explanation;
+        this.matchPercentage = matchPercentage;
+        this.missingSkills = missingSkills != null ? missingSkills : new ArrayList<>();
     }
 
     public Job getJob() {
@@ -50,5 +61,21 @@ public class JobRecommendation {
 
     public void setExplanation(String explanation) {
         this.explanation = explanation;
+    }
+
+    public double getMatchPercentage() {
+        return matchPercentage;
+    }
+
+    public void setMatchPercentage(double matchPercentage) {
+        this.matchPercentage = matchPercentage;
+    }
+
+    public List<String> getMissingSkills() {
+        return missingSkills;
+    }
+
+    public void setMissingSkills(List<String> missingSkills) {
+        this.missingSkills = missingSkills;
     }
 }

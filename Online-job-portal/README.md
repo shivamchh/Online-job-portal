@@ -191,6 +191,7 @@ Cloud health checks probe the following unauthenticated endpoint:
 ## 📂 Documentation & Architecture Assets
 * **Entity-Relationship Diagram**: [docs/ER_DIAGRAM.md](docs/ER_DIAGRAM.md)
 * **UML Class Diagram**: [docs/UML_CLASS_DIAGRAM.md](docs/UML_CLASS_DIAGRAM.md)
+* **System Research & Architectural Analysis**: [docs/RESEARCH_AND_SYSTEM_ANALYSIS.md](docs/RESEARCH_AND_SYSTEM_ANALYSIS.md)
 * **Postman / Bruno API Collection**: [docs/POSTMAN_COLLECTION.json](docs/POSTMAN_COLLECTION.json)
 * **Application Screenshots**:
   * [Admin Dashboard & Live Counters](docs/screenshots/admin-dashboard.png)
@@ -200,3 +201,13 @@ Cloud health checks probe the following unauthenticated endpoint:
   * [Job Seeker Discovery Dashboard](docs/screenshots/jobseeker-dashboard.png)
   * [Secure Login Page](docs/screenshots/login-page.png)
   * [Job Inspection Modal](docs/screenshots/modal-inspection.png)
+
+---
+
+## 👥 Project Contributors & Team
+
+| Name | Role | Primary Contributions |
+| :--- | :--- | :--- |
+| **Shivam Chh** | Lead Developer | System Architecture, Full-Stack MVC Implementation, Authentication & Database Pipeline |
+| **Saunak Sharma** | Research & Backend Contributor | Architectural Research, Matching Algorithm Formulation, Candidate Analytics Utility & Diagnostics Tooling |
+
